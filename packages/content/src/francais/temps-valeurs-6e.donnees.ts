@@ -509,7 +509,7 @@ export const TROUS: readonly Trou[] = [
   trou('Chaque nuit,', un('le veilleur'), 'regarder', 'les étoiles', 'habitude'),
 ];
 
-/** Une action en cours, puis un événement (niveau 4) : le sujet de chaque partie précède son verbe. */
+/** Une action en cours, puis « quand, soudain » un événement (niveau 4) : chaque sujet précède son verbe. */
 export interface DeuxTrous {
   readonly cours: Omit<Trou, 'role' | 'repere'>;
   readonly survient: Omit<Trou, 'role' | 'repere'>;
@@ -528,10 +528,10 @@ export const DOUBLES: readonly DeuxTrous[] = [
   deux(partie('La princesse', 'il', 'chanter', 'au jardin'), partie('le dragon', 'il', 'faire', 'un grand bruit')),
   deux(partie('Le meunier', 'il', 'marcher', 'vers le village'), partie('il', 'il', 'voir', 'un loup')),
   deux(partie('Les enfants', 'ils', 'jouer', 'près du puits'), partie('une fée', 'il', 'prendre', 'la parole')),
-  deux(partie('Le chevalier', 'il', 'être', 'encore jeune'), partie('il', 'il', 'trouver', 'cette épée')),
+  deux(partie('Le chevalier', 'il', 'être', 'dans la grotte'), partie('il', 'il', 'trouver', 'une épée')),
   deux(partie('Les bergers', 'ils', 'parler', 'près du feu'), partie('deux étrangers', 'ils', 'venir', 'vers eux')),
   deux(partie('La sorcière', 'il', 'faire', 'sa soupe'), partie('ses chats', 'ils', 'sauter', 'sur la table')),
-  deux(partie('Le prince', 'il', 'avoir', 'dix ans'), partie('il', 'il', 'aller', 'à la cour')),
+  deux(partie('Le prince', 'il', 'avoir', 'un livre à la main'), partie('il', 'il', 'aller', 'à la fenêtre')),
   deux(partie('Les marins', 'ils', 'dessiner', 'une carte'), partie('ils', 'ils', 'voir', 'une île')),
 ];
 

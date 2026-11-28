@@ -99,15 +99,30 @@ const EPOQUES: readonly Epoque[] = ['passé', 'présent', 'futur'];
 const TEMPS_VERBAUX: readonly TempsVerbal[] = ['présent', 'imparfait', 'futur', 'passé composé'];
 
 export const ECRITURES_EPOQUE: Record<Epoque, readonly string[]> = {
-  passé: ecritures('passé', 'le passé', 'dans le passé'),
-  présent: ecritures('présent', 'le présent', 'dans le présent'),
-  futur: ecritures('futur', 'le futur', 'dans le futur', 'avenir', 'l’avenir'),
+  passé: ecritures('passé', 'le passé', 'dans le passé', 'au passé'),
+  présent: ecritures('présent', 'le présent', 'dans le présent', 'au présent'),
+  futur: ecritures('futur', 'le futur', 'dans le futur', 'au futur', 'avenir', 'l’avenir', 'à l’avenir'),
 };
 export const ECRITURES_TEMPS: Record<TempsVerbal, readonly string[]> = {
   présent: ecritures('présent', 'le présent', 'au présent', 'présent de l’indicatif'),
   imparfait: ecritures('imparfait', 'l’imparfait', 'à l’imparfait', 'imparfait de l’indicatif'),
-  futur: ecritures('futur', 'le futur', 'au futur', 'futur simple', 'le futur simple'),
-  'passé composé': ecritures('passé composé', 'le passé composé', 'au passé composé'),
+  futur: ecritures(
+    'futur',
+    'le futur',
+    'au futur',
+    'futur simple',
+    'le futur simple',
+    'au futur simple',
+    'futur de l’indicatif',
+    'futur simple de l’indicatif',
+  ),
+  'passé composé': ecritures(
+    'passé composé',
+    'le passé composé',
+    'au passé composé',
+    'passé composé de l’indicatif',
+    'passé-composé',
+  ),
 };
 
 const INDICE_FORME: Record<TempsVerbal, string> = {
@@ -245,6 +260,8 @@ export const ECRITURES_VALEUR: Record<Valeur, readonly string[]> = {
     'd’énonciation',
     'l’énonciation',
     'le présent d’énonciation',
+    'présent de l’énonciation',
+    'de l’énonciation',
   ),
   'vérité générale': ecritures(
     'vérité générale',
@@ -261,6 +278,8 @@ export const ECRITURES_VALEUR: Record<Valeur, readonly string[]> = {
     'de narration',
     'la narration',
     'le présent de narration',
+    'présent narratif',
+    'narratif',
     'présent historique',
     'historique',
   ),
@@ -463,17 +482,21 @@ function recitDraft(rng: Rng, level: Level): QuestionDraft {
       const cours = imparfait(x.cours.verbe, x.cours.personne);
       const survient = passeSimple(x.survient.verbe, x.survient.personne);
       return {
-        prompt: `Écris « ${x.cours.verbe} » puis « ${x.survient.verbe} » : l’action en cours d’abord, l’événement qui survient ensuite.`,
+        prompt: `Écris « ${x.cours.verbe} » et « ${x.survient.verbe} » à l’imparfait ou au passé simple.`,
         answer: {
           kind: 'cloze',
-          parts: [`${x.cours.sujet} `, ` ${x.cours.suite} quand ${x.survient.sujet} `, ` ${x.survient.suite}.`],
+          parts: [
+            `${x.cours.sujet} `,
+            ` ${x.cours.suite} quand, soudain, ${x.survient.sujet} `,
+            ` ${x.survient.suite}.`,
+          ],
           blanks: [ecrit([cours]), ecrit([survient])],
         },
         traps: [],
         hint: 'Un verbe plante la situation, l’autre fait avancer l’histoire.',
         steps: [
-          `Mets « ${x.cours.verbe} » à l’imparfait : l’action est en cours.`,
-          `Mets « ${x.survient.verbe} » au passé simple : le fait survient.`,
+          `Lis « quand, soudain » : « ${x.survient.verbe} » dit un fait qui survient. Mets-le au passé simple.`,
+          `Observe « ${x.cours.verbe} » : l’action dure déjà. Mets-le à l’imparfait.`,
           `Retiens les deux formes : ${gras([cours, survient])}.`,
         ],
       };
@@ -713,7 +736,7 @@ export const F6_VALEURS_TEMPS: readonly Skill[] = [
     memo: [
       'Le **présent d’énonciation** montre un fait qui a lieu quand on parle : « Je t’écoute. »',
       'Le **présent de vérité générale** dit une idée vraie en tout temps : « La Terre tourne. »',
-      'Le **présent de narration** raconte le passé : « Hier, soudain, un chien aboie ! »',
+      'Le **présent de narration** raconte le passé : « Il faisait nuit quand, soudain, un chien aboie ! »',
     ],
     factId: 'vt-initier',
     faits: [

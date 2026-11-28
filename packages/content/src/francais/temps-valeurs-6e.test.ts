@@ -187,6 +187,17 @@ describe('réponses des niveaux', () => {
     }
   });
 
+  it('imparfait et passé simple N4 : la phrase donne les indices, la consigne ne donne pas les rôles', () => {
+    for (const q of tirages('f6-imparfait-passe-simple', 4)) {
+      if (q.answer.kind !== 'cloze') throw new Error('forme inattendue');
+      expect(q.prompt).not.toMatch(/en cours|survient/);
+      expect(q.answer.parts[1]).toContain('quand, soudain, ');
+      const x = DOUBLES.find((d) => q.prompt.includes(`« ${d.cours.verbe} » et « ${d.survient.verbe} »`));
+      expect(x, q.prompt).toBeDefined();
+      expect(q.answer.blanks).toHaveLength(2);
+    }
+  });
+
   it('niveau 5 : ni liste ni proposition, tout s’écrit', () => {
     for (const s of skills)
       for (const q of tirages(s.id, 5)) {
