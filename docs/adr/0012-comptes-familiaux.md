@@ -33,6 +33,11 @@ familles, et empêcher qu'un enfant fasse seul les actions du parent sur l'appar
   parent) et session absente ou expirée. Durcissement assumé de la v1 ([ADR 0004](0004-api-versionnee.md)) :
   une page restée sur l'ancienne version ne peut plus déconnecter sans ce verrou. Un portail placé
   devant la plateforme (`PORTAL_LOGOUT_URL`) est quitté à la suite.
+- **Connexion par le portail** (recette seulement, `PORTAL_LOGIN`) : l'e-mail transmis par le proxy
+  authentifiant, qui prouve son identité par un secret, crée un compte sans mot de passe ou ouvre celui de
+  même adresse, relié seulement si elle est déjà vérifiée. Un compte sans mot de passe choisit son code PIN
+  dès la première connexion ; le verrou parent s'applique ensuite comme aux autres, et un nouveau passage par
+  le portail ne l'ouvre pas. Conditions : [recette](../operations/recette-internet.md).
 - **Mot de passe oublié** : lien à usage unique (1 h) envoyé par l'interface `Mailer`. Aucun
   fournisseur d'e-mails n'est branché (décision humaine) : en production, l'envoi est journalisé
   sans contenu.
