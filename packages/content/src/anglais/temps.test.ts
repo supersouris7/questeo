@@ -229,19 +229,90 @@ describe('anglais cm1 : le temps qui passe', () => {
     );
   });
 
-  it('météo, niveau 5 : la réponse est le seul mot commun aux deux villes demandées', () => {
-    for (let seed = 1; seed <= 60; seed++) {
-      const q = generate('acm1-meteo', 5, seed);
-      const towns = /à (\w+) et à (\w+) \?/.exec(q.prompt)?.slice(1) ?? [];
-      expect(towns).toHaveLength(2);
-      if (q.figure?.kind !== 'document' || q.answer.kind !== 'text') throw new Error('document attendu');
-      const lines = q.figure.lines;
-      const [x, y] = towns.map(
-        (t) => /it’s (\w+) and (\w+)/.exec(lines.find((l) => l.includes(t)) ?? '')?.slice(1) ?? [],
-      );
-      const common = (x ?? []).filter((w) => y?.includes(w));
-      expect(common).toHaveLength(1);
-      expect(q.answer.accepted[0]).toBe(`It’s ${common[0] ?? ''}`);
+  it('saisons : « the + saison » (et « the fall ») acceptés aux niveaux 3 à 5', () => {
+    const tried = new Set<string>();
+    for (const level of [3, 4, 5] as const)
+      for (let seed = 1; seed <= 200; seed++) {
+        const q = generate('acm1-saisons', level, seed);
+        if (q.answer.kind !== 'text') continue;
+        const word = q.answer.accepted[0] ?? '';
+        if (!SEASONS.some((s) => s.en === word)) continue;
+        tried.add(`${level} ${word}`);
+        const texts = [`the ${word}`, ...(word === 'autumn' ? ['fall', 'the fall'] : [])];
+        for (const text of texts) expect(right('acm1-saisons', level, seed, text), `${level} ${text}`).toBe(true);
+      }
+    expect(tried.size).toBe(12);
+  });
+
+  it('date, niveau 3 à trous : les deux ordres sortent, « on » devant la date et « in » devant le mois', () => {
+    const orders = new Set<string>();
+    for (let seed = 1; seed <= 200; seed++) {
+      const q = generate('acm1-date', 3, seed);
+      if (q.answer.kind !== 'cloze') continue;
+      const { parts, blanks } = q.answer;
+      const given = blanks.map((b) => (b.mode === 'text' ? (b.accepted[0] ?? '') : ''));
+      expect(given).toEqual(parts.slice(1).map((p) => (/^ \d/.test(p) ? 'on' : 'in')));
+      expect(q.steps.at(-1)).toBe(`Réponds : **${given[0] ?? ''}**, puis **${given[1] ?? ''}**.`);
+      orders.add(given.join(' '));
     }
+    expect([...orders].sort()).toEqual(['in on', 'on in']);
+  });
+
+  it('date, niveaux 3 à 5 : point final accepté, erreur expliquée avec ou sans point', () => {
+    for (const level of [3, 4, 5] as const)
+      for (let seed = 1; seed <= 60; seed++) {
+        const q = generate('acm1-date', level, seed);
+        if (q.answer.kind !== 'text') continue;
+        expect(right('acm1-date', level, seed, `${q.answer.accepted[0] ?? ''}.`)).toBe(true);
+        for (const t of q.traps)
+          if ('text' in t) {
+            const bare = t.text.replace(/\.$/, '');
+            for (const text of [bare, `${bare}.`]) expect(check(q, { kind: 'text', text }).why, text).toBe(t.why);
+          }
+      }
+  });
+
+  it('météo, niveaux 4 et 5 : « Its … » expliqué, avec ou sans point', () => {
+    for (const level of [4, 5] as const)
+      for (let seed = 1; seed <= 60; seed++) {
+        const q = generate('acm1-meteo', level, seed);
+        if (q.answer.kind !== 'text') throw new Error('saisie attendue');
+        const word = (q.answer.accepted[0] ?? '').split(' ')[1] ?? '';
+        for (const text of [`Its ${word}`, `Its ${word}.`])
+          expect(check(q, { kind: 'text', text }).why, text).toMatch(/apostrophe/);
+      }
+  });
+
+  it('météo, niveau 5 : aucun mot répété, seul le sens du temps demandé désigne la ville', () => {
+    const meaning: Readonly<Record<string, string>> = {
+      'il fait froid': 'cold',
+      'il y a du vent': 'windy',
+      'il y a des nuages': 'cloudy',
+      'il pleut': 'rainy',
+      'il neige': 'snowy',
+      'il y a du brouillard': 'foggy',
+    };
+    const asked = new Set<string>();
+    const lineOfAnswer = new Set<number>();
+    for (let seed = 1; seed <= 200; seed++) {
+      const q = generate('acm1-meteo', 5, seed);
+      if (q.figure?.kind !== 'document' || q.answer.kind !== 'text') throw new Error('document attendu');
+      const word = meaning[/la ville où (.+?), quel/.exec(q.prompt)?.[1] ?? ''] ?? '';
+      expect(word, q.prompt).not.toBe('');
+      expect(q.prompt).not.toContain(word);
+      const pairs = q.figure.lines.map((l) => /it’s (\w+) and (\w+)/.exec(l)?.slice(1) ?? []);
+      expect(new Set(pairs.flat()).size).toBe(6);
+      const i = pairs.findIndex((p) => p.includes(word));
+      const other = pairs[i]?.find((w) => w !== word) ?? '';
+      expect(q.answer.accepted[0]).toBe(`It’s ${other}`);
+      const town = /^In (\w+),/.exec(q.figure.lines[i] ?? '')?.[1] ?? '';
+      expect(right('acm1-meteo', 5, seed, `In ${town}, it's ${other}.`)).toBe(true);
+      expect(right('acm1-meteo', 5, seed, other)).toBe(false);
+      expect(right('acm1-meteo', 5, seed, `It's ${word}`)).toBe(false);
+      asked.add(word);
+      lineOfAnswer.add(i);
+    }
+    expect(asked.size).toBe(6);
+    expect(lineOfAnswer.size).toBe(3);
   });
 });

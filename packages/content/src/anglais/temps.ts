@@ -1,6 +1,7 @@
 import type { Chapter, QuestionDraft, Skill } from '../types.ts';
 import type { Rng } from '../rng.ts';
 import { choice } from '../build.ts';
+import { dottedTraps } from './outils-5e.ts';
 import { COLOURS, DATES, DAYS, MONTHS, SEASONS, WEATHER, type SourcedDate, type Word } from './temps-faits.ts';
 
 /**
@@ -36,6 +37,8 @@ export function shuffledOther<T>(rng: Rng, list: readonly T[]): T[] {
 const accepted = (w: Word): string[] => [w.en, ...(w.alt ?? [])];
 /** Saisies acceptées avec ou sans point final. */
 const dotted = (forms: readonly string[]): string[] => [...new Set(forms)].flatMap((f) => [f, `${f}.`]);
+/** Une saison se traduit avec ou sans article : « spring », « the spring » (et « the fall »). */
+const withThe = (w: Word): string[] => accepted(w).flatMap((s) => [s, `the ${s}`]);
 
 // ——— Questions communes au vocabulaire ———
 
@@ -115,12 +118,18 @@ export function pairs(rng: Rng, list: readonly Word[], n: number, say?: Pick<Say
 }
 
 /** Niveau 3 : écrire le mot. */
-export function write(rng: Rng, list: readonly Word[], kind: string, say?: Pick<Say, 'write'>): QuestionDraft {
+export function write(
+  rng: Rng,
+  list: readonly Word[],
+  kind: string,
+  say?: Pick<Say, 'write'>,
+  forms: (w: Word) => string[] = accepted,
+): QuestionDraft {
   const w = rng.pick(list);
   const other = at(others(rng, list, w, 1), 0);
   return {
     prompt: `Écris en anglais (${kind}) : « ${w.fr} »`,
-    answer: { kind: 'text', accepted: accepted(w) },
+    answer: { kind: 'text', accepted: forms(w) },
     traps: [
       { text: w.typo, why: `Presque ! Regarde bien les lettres : le mot s’écrit « ${w.en} ».` },
       { text: other.en, why: `« ${other.en} » veut dire « ${other.fr} ».` },
@@ -156,7 +165,12 @@ const SAY = {
 };
 
 /** Mot suivant ou précédent dans un cycle (jours, mois, saisons). */
-function neighbour(rng: Rng, list: readonly Word[], unit: string): QuestionDraft {
+function neighbour(
+  rng: Rng,
+  list: readonly Word[],
+  unit: string,
+  forms: (w: Word) => string[] = accepted,
+): QuestionDraft {
   const i = rng.int(0, list.length - 1);
   const next = rng.int(0, 1) === 0;
   const w = at(list, i);
@@ -166,7 +180,7 @@ function neighbour(rng: Rng, list: readonly Word[], unit: string): QuestionDraft
   const where = next ? 'juste après' : 'juste avant';
   return {
     prompt: `Écris en anglais ${unit} qui vient ${where} « ${w.en} ».`,
-    answer: { kind: 'text', accepted: accepted(good) },
+    answer: { kind: 'text', accepted: forms(good) },
     traps: [
       { text: bad.en, why: `Attention au sens : « ${bad.en} » vient ${next ? 'avant' : 'après'} « ${w.en} ».` },
       { text: good.typo, why: `Le bon choix, mais regarde les lettres : « ${good.en} ».` },
@@ -582,10 +596,10 @@ const seasons: Skill = {
     if (level === 2) return understand(rng, SEASONS, 'une saison', SAY.seasons);
     if (level === 3)
       return rng.int(0, 1) === 0
-        ? write(rng, SEASONS, 'une saison', SAY.seasons)
+        ? write(rng, SEASONS, 'une saison', SAY.seasons, withThe)
         : ordering(rng, SEASONS, 3, 'ces saisons');
     if (level === 4) {
-      if (rng.int(0, 1) === 0) return neighbour(rng, SEASONS, 'la saison');
+      if (rng.int(0, 1) === 0) return neighbour(rng, SEASONS, 'la saison', withThe);
       const w = rng.pick(SEASONS);
       const fr = { spring: 'au printemps', summer: 'en été', autumn: 'en automne', winter: 'en hiver' }[w.en];
       return {
@@ -614,7 +628,7 @@ const seasons: Skill = {
         lines: [first.en],
         credit: 'Écrit pour l’exercice.',
       },
-      answer: { kind: 'text', accepted: accepted(good) },
+      answer: { kind: 'text', accepted: withThe(good) },
       traps: [
         ...SEASONS.filter((s) => s !== good).map((s) => ({
           text: s.en,
@@ -693,7 +707,7 @@ const date: Skill = {
   sens: [
     {
       type: 'usage',
-      text: 'Une invitation anglaise te dit quand vient la fête : « Party starts : Friday 31 October ».',
+      text: 'Une invitation anglaise te dit quand vient la fête : « Party starts: Friday 31 October ».',
       source: 'bck-halloween-invitation',
       citation: 'Party starts: Friday 31 October at 5 p.m.',
     },
@@ -757,33 +771,39 @@ const date: Skill = {
     if (level === 3) {
       if (rng.int(0, 1) === 0) {
         const other = rng.pick(DATES.filter((x) => x.month !== d.month));
+        const holes = [
+          { before: 'The match is ', word: dateEn(d), good: 'on', what: 'une date' },
+          { before: 'The party is ', word: other.month, good: 'in', what: 'un mois seul' },
+        ] as const;
+        // L’ordre des phrases change : la réponse ne peut pas s’apprendre par cœur.
+        const [one, two] = rng.int(0, 1) === 0 ? holes : ([holes[1], holes[0]] as const);
         return {
-          prompt: `Écris « on » ou « in » dans chaque trou : « The match is … ${dateEn(d)}. The party is … ${other.month}. »`,
+          prompt: `Écris « on » ou « in » dans chaque trou : « ${one.before}… ${one.word}. ${two.before}… ${two.word}. »`,
           answer: {
             kind: 'cloze',
-            parts: ['The match is ', ` ${dateEn(d)}. The party is `, ` ${other.month}.`],
+            parts: [one.before, ` ${one.word}. ${two.before}`, ` ${two.word}.`],
             blanks: [
-              { mode: 'text', accepted: ['on'] },
-              { mode: 'text', accepted: ['in'] },
+              { mode: 'text', accepted: [one.good] },
+              { mode: 'text', accepted: [two.good] },
             ],
           },
           hint: 'Un trou après l’autre : y a-t-il un numéro de jour, ou seulement un mois ?',
           steps: [
-            `Lis le premier trou : « ${dateEn(d)} » est une date.`,
-            `Lis le second trou : « ${other.month} » est un mois seul.`,
-            'Réponds : **on**, puis **in**.',
+            `Lis le premier trou : « ${one.word} » est ${one.what}.`,
+            `Lis le second trou : « ${two.word} » est ${two.what}.`,
+            `Réponds : **${one.good}**, puis **${two.good}**.`,
           ],
         };
       }
       const m = otherMonth(rng, d.month);
       return {
         prompt: `Écris en anglais la date : « le ${dateFr(d)} ».`,
-        answer: { kind: 'text', accepted: withOn(dateAccepted(d)) },
-        traps: [
+        answer: { kind: 'text', accepted: dotted(withOn(dateAccepted(d))) },
+        traps: dottedTraps([
           { text: `${d.day} ${frMonth(d.month)}`, why: `Écris le mois en anglais : « ${d.month} ».` },
           { text: `${d.day} ${m}`, why: `« ${m} » veut dire « ${frMonth(m)} ».` },
           { text: d.month, why: 'Il manque le numéro du jour.' },
-        ],
+        ]),
         hint: 'Écris d’abord le numéro, puis le mois en anglais avec sa majuscule.',
         steps: [
           `Écris d’abord le numéro : ${d.day}.`,
@@ -798,12 +818,12 @@ const date: Skill = {
       const good = `on ${day.en} ${dateEn(d)}`;
       return {
         prompt: `Écris en anglais, avec le petit mot qui va devant : « le ${day.fr} ${dateFr(d)} ».`,
-        answer: { kind: 'text', accepted: withDay(day.en, dateAccepted(d)).map((f) => `on ${f}`) },
-        traps: [
+        answer: { kind: 'text', accepted: dotted(withDay(day.en, dateAccepted(d)).map((f) => `on ${f}`)) },
+        traps: dottedTraps([
           { text: `${day.en} ${dateEn(d)}`, why: 'Il manque le petit mot qui va devant une date.' },
           { text: `in ${day.en} ${dateEn(d)}`, why: '« in » va avec un mois seul. Devant une date, on met « on ».' },
           { text: `on ${day.en} ${d.day} ${frMonth(d.month)}`, why: `Écris le mois en anglais : « ${d.month} ».` },
-        ],
+        ]),
         hint: 'Trouve d’abord le petit mot qui va devant une date. Chaque jour et chaque mois prend une majuscule.',
         steps: [
           'Mets d’abord « on » : c’est une date.',
@@ -828,13 +848,13 @@ const date: Skill = {
       },
       answer: {
         kind: 'text',
-        accepted: withOn([...dateAccepted(good), ...withDay(asked.en, dateAccepted(good))]),
+        accepted: dotted(withOn([...dateAccepted(good), ...withDay(asked.en, dateAccepted(good))])),
       },
-      traps: [
+      traps: dottedTraps([
         { text: `${start} ${month}`, why: `C’est la date de « Monday ». Compte les jours jusqu’à « ${asked.en} ».` },
         { text: `${good.day + 1} ${month}`, why: 'Tu as compté un jour de trop.' },
         { text: asked.en, why: 'On demande la date : un numéro et un mois.' },
-      ],
+      ]),
       hint: '« Week beginning » veut dire « la semaine commence ». Compte les jours depuis Monday.',
       steps: [
         `Cherche la ligne « class trip » : c’est « ${asked.en} ».`,
@@ -847,6 +867,32 @@ const date: Skill = {
 };
 
 // ——— 6. La météo ———
+/** Phrases justes pour dire un temps : « It’s sunny », « It is sunny today », « It’s a sunny day ». */
+const weatherSentences = (w: Word): string[] =>
+  accepted(w).flatMap((f) =>
+    ['It’s', 'It is'].flatMap((it) => [
+      `${it} ${f}`,
+      `${it} ${f} today`,
+      // « It’s a sunny day » est juste aussi ; pas avec « raining » ou « snowing ».
+      ...(f.endsWith('ing') ? [] : [`${it} a ${f} day`]),
+    ]),
+  );
+const ITS = '« its » veut dire « son » ou « sa ». Il faut « it’s », avec une apostrophe.';
+/** Temps du niveau 5, dit en français dans la question. */
+const CONDITIONS: Readonly<Record<string, string>> = {
+  cold: 'il fait froid',
+  windy: 'il y a du vent',
+  cloudy: 'il y a des nuages',
+  rainy: 'il pleut',
+  snowy: 'il neige',
+  foggy: 'il y a du brouillard',
+};
+const weatherWord = (en: string): Word => {
+  const w = WEATHER.find((x) => x.en === en);
+  if (!w) throw new Error(`temps inconnu : ${en}`);
+  return w;
+};
+
 const weather: Skill = {
   id: 'acm1-meteo',
   title: 'La météo',
@@ -911,27 +957,14 @@ const weather: Skill = {
     if (level === 4) {
       const w = rng.pick(WEATHER);
       const other = at(others(rng, WEATHER, w, 1), 0);
-      const forms = accepted(w);
       return {
         prompt: `Réponds à « What’s the weather like? » par une phrase avec « it’s » : le temps est « ${w.fr} ».`,
-        answer: {
-          kind: 'text',
-          accepted: dotted(
-            forms.flatMap((f) =>
-              ['It’s', 'It is'].flatMap((it) => [
-                `${it} ${f}`,
-                `${it} ${f} today`,
-                // « It’s a sunny day » est juste aussi ; pas avec « raining » ou « snowing ».
-                ...(f.endsWith('ing') ? [] : [`${it} a ${f} day`]),
-              ]),
-            ),
-          ),
-        },
-        traps: [
+        answer: { kind: 'text', accepted: dotted(weatherSentences(w)) },
+        traps: dottedTraps([
           { text: w.en, why: 'Le mot est bon. Fais une phrase : commence par « It’s ».' },
-          { text: `Its ${w.en}.`, why: '« its » veut dire « son » ou « sa ». Il faut « it’s », avec une apostrophe.' },
-          { text: `It’s ${other.en}.`, why: `« ${other.en} » veut dire « ${other.fr} ».` },
-        ],
+          { text: `Its ${w.en}`, why: ITS },
+          { text: `It’s ${other.en}`, why: `« ${other.en} » veut dire « ${other.fr} ».` },
+        ]),
         hint: 'Commence par « It’s », puis ajoute le mot de la météo.',
         steps: [
           'Commence la phrase par « It’s ».',
@@ -940,53 +973,45 @@ const weather: Skill = {
         ],
       };
     }
-    // Deux villes ont un seul mot en commun : il faut comparer, puis écrire la phrase.
-    const common = rng.pick(['cold', 'windy', 'cloudy']);
-    const [a, b, c, d] = rng.shuffle(['cold', 'windy', 'cloudy', 'rainy', 'snowy'].filter((x) => x !== common)) as [
-      string,
-      string,
-      string,
-      string,
-    ];
-    const [first, second, third] = some(rng, ['London', 'Glasgow', 'Cardiff', 'Belfast'], 3) as [
-      string,
-      string,
-      string,
-    ];
+    // Aucun mot n’est répété : seul le sens du temps demandé désigne la bonne ville.
+    const words = rng.shuffle(Object.keys(CONDITIONS));
+    const towns = some(rng, ['London', 'Glasgow', 'Cardiff', 'Belfast'], 3);
+    const rows = towns.map((town, i) => ({ town, pair: [at(words, 2 * i), at(words, 2 * i + 1)] }));
+    const row = rng.pick(rows);
+    const [asked, wanted] = rng.shuffle(row.pair) as [string, string];
+    const good = weatherWord(wanted);
+    const condition = CONDITIONS[asked] ?? '';
     const day = rng.pick(DAYS).en;
-    const pair = (x: string, y: string) => rng.shuffle([x, y]).join(' and ');
-    const lines = rng.shuffle([
-      `In ${first}, it’s ${pair(common, a)}.`,
-      `In ${second}, it’s ${pair(common, b)}.`,
-      `In ${third}, it’s ${pair(c, d)}.`,
-    ]);
-    const frWord = WEATHER.find((w) => w.en === common)?.fr ?? common;
+    const sentences = weatherSentences(good);
     return {
-      prompt: `Lis la météo des villes. Quel temps fait-il à la fois à ${first} et à ${second} ? Réponds en anglais avec « it’s » et un seul mot.`,
+      prompt: `Lis la météo des villes. Dans la ville où ${condition}, quel autre temps fait-il ? Réponds par une phrase en anglais.`,
       figure: {
         kind: 'document',
         title: `Weather on ${day}`,
-        lines,
+        lines: rows.map(({ town, pair }) => `In ${town}, it’s ${pair.join(' and ')}.`),
         credit: 'Météo imaginaire, écrite pour l’exercice.',
       },
       answer: {
         kind: 'text',
-        accepted: dotted(
-          ['It’s', 'It is'].flatMap((it) => [`${it} ${common}`, `${it} ${common} today`, `${it} a ${common} day`]),
-        ),
+        accepted: dotted([...sentences, ...sentences.map((f) => `In ${row.town}, ${f.replace('It', 'it')}`)]),
       },
-      traps: [
-        { text: common, why: 'Le mot est bon. Fais une phrase : commence par « It’s ».' },
-        { text: `It’s ${a}.`, why: `Ce temps est écrit pour ${first}, mais pas pour ${second}.` },
-        { text: `It’s ${b}.`, why: `Ce temps est écrit pour ${second}, mais pas pour ${first}.` },
-        { text: `Its ${common}.`, why: '« its » veut dire « son » ou « sa ». Il faut « it’s », avec une apostrophe.' },
-      ],
-      hint: 'Lis les lignes de ces deux villes. Quel mot revient dans les deux ?',
+      traps: dottedTraps([
+        { text: good.en, why: 'Le mot est bon. Fais une phrase : commence par « It’s ».' },
+        { text: `Its ${good.en}`, why: ITS },
+        { text: `It’s ${asked}`, why: 'C’est le temps de la question. On demande l’autre temps de cette ville.' },
+        ...words
+          .filter((x) => !row.pair.includes(x))
+          .map((x) => ({
+            text: `It’s ${x}`,
+            why: `Ce temps est écrit pour une autre ville. Cherche d’abord la ville où ${condition}.`,
+          })),
+      ]),
+      hint: 'Trouve le mot anglais pour le temps de la question. Lis ensuite toute sa ligne.',
       steps: [
-        `Lis la ligne de ${first} : « ${common} » et « ${a} ».`,
-        `Lis la ligne de ${second} : « ${common} » et « ${b} ».`,
-        `Garde le mot commun : « ${common} » (${frWord}).`,
-        `Écris **It’s ${common}.**`,
+        `Pour dire « ${condition} », cherche le mot « ${asked} ».`,
+        `Trouve sa ligne, celle de ${row.town}. Lis aussi « ${wanted} ».`,
+        `Traduis ce deuxième mot : « ${good.fr} ».`,
+        `Écris **It’s ${wanted}.**`,
       ],
     };
   },
