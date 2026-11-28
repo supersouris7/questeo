@@ -172,13 +172,12 @@ const TYPED_POOL: Readonly<Record<Typed, readonly Translated[]>> = { but: CONCES
 
 /**
  * Saisie sans traduction : le mot se déduit de la phrase anglaise seule. On garde les phrases où la seconde idée
- * contrarie un souhait ou un goût (« whereas » n’y convient pas), et on écarte l’exemple du mémo.
+ * contrarie un souhait ou un goût (« whereas » n’y convient pas).
  */
-const MEMO_START = 'The test was hard;';
 const ALONE_STARTS: readonly string[] = ['I am tired,', 'She wants to play,', 'I want to come,', 'I like this song,'];
 export const ALONE_POOL: Readonly<Record<Typed, readonly Joined[]>> = {
   but: CONCESSIONS.filter((j) => ALONE_STARTS.includes(j.start)),
-  however: HOWEVERS.filter((j) => j.start !== MEMO_START),
+  however: HOWEVERS,
 };
 const ALONE_WHY: Readonly<Record<Typed, readonly TextTrap[]>> = {
   but: [
@@ -251,7 +250,7 @@ const linkSkill: Skill = {
     memo: [
       'Un **contraste** oppose deux idées : but (mais), whereas (alors que), however (cependant).',
       'however peut suivre un point ou un point-virgule, avec une virgule derrière lui.',
-      'Exemple : « The test was hard; however, I did my best. »',
+      'Exemple : « The bus was slow; however, we arrived on time. »',
     ],
     source: source('exprimer une opposition, une concession ou un contraste'),
     sources: [PROG],

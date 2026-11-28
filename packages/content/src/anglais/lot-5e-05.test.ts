@@ -9,7 +9,15 @@ import type { Level, Question } from '../types.ts';
 import { validateVariants } from '../validate.ts';
 import { ENGLISH_PRONOUNS_5E_CHAPTER, NOUNS, PREFIX_PAIRS } from './groupe-nominal-5e.ts';
 import { FAITS as GROUP_FACTS } from './groupe-nominal-5e-faits.ts';
-import { ALONE_POOL, CASES, CONCESSIONS, ENGLISH_LINKING_5E_CHAPTER, HOWEVERS, QUALITIES } from './relier-situer.ts';
+import {
+  ALONE_POOL,
+  CASES,
+  COMPARISONS,
+  CONCESSIONS,
+  ENGLISH_LINKING_5E_CHAPTER,
+  HOWEVERS,
+  QUALITIES,
+} from './relier-situer.ts';
 import { FAITS as LINK_FACTS } from './relier-situer-faits.ts';
 
 const LEVELS: readonly Level[] = [1, 2, 3, 4, 5];
@@ -210,6 +218,20 @@ describe('anglais 5e : groupe nominal et pronoms, relier et situer', () => {
       expect(memo).not.toContain(j!.start);
       expect([q.prompt, q.hint].join(' ')).not.toMatch(/\bmais\b|cependant|alors que/);
       for (const x of [...CONCESSIONS, ...HOWEVERS]) expect(q.prompt).not.toContain(x.fr);
+    }
+  });
+
+  it('contraste : la phrase d’exemple du mémo n’est reprise dans aucun item', () => {
+    const memo = getSkill('a5-contraste')!.lesson.memo.join(' ');
+    const [, start, end] = /Exemple : « (.+;) however, (.+) »/.exec(memo)!;
+    for (const j of [...CONCESSIONS, ...COMPARISONS, ...HOWEVERS]) {
+      expect(j.start).not.toBe(start);
+      expect(j.end).not.toBe(end);
+    }
+    for (const q of LEVELS.flatMap((l) => questions('a5-contraste', l))) {
+      const shown = `${q.prompt} ${JSON.stringify(q.figure ?? null)}`;
+      expect(shown).not.toContain(start);
+      expect(shown).not.toContain(end);
     }
   });
 
