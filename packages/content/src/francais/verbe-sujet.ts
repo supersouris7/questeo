@@ -494,9 +494,9 @@ const byType = (type: TypeSujet) => SUJETS.filter((s) => s.type === type);
 
 /** La bulle qui fait regarder les noms du sujet. */
 const observeType = (s: Sujet): string => {
-  if (s.type === 'pronom') return `Cherche un nom dans « ${s.s} » : aucun.`;
-  if (s.type === 'noms') return `Compte les noms de « ${s.s} » : plusieurs.`;
-  return `Compte les noms de « ${s.s} » : un seul.`;
+  if (s.type === 'pronom') return `Cherche un nom dans « ${s.s} » : aucun, donc c’est un pronom.`;
+  if (s.type === 'noms') return `Compte les noms de « ${s.s} » : plusieurs, donc « plusieurs noms ».`;
+  return `Compte les noms de « ${s.s} » : un seul, donc un groupe nominal.`;
 };
 
 const stepsType = (s: Sujet) => [
@@ -618,9 +618,7 @@ function typesSujetsDraft(rng: Rng, level: Level): QuestionDraft {
           ],
           [k - 1, `Tu en as oublié un. Relis chaque sujet, comme « ${at(noms, 0).s} » : il a plusieurs noms.`],
           [g, 'Tu as compté les groupes nominaux : ils n’ont qu’un seul nom noyau.'],
-          ...(p > 0
-            ? [[p, 'Tu as compté les pronoms : un pronom remplace un nom, ce n’est pas « plusieurs noms ».'] as const]
-            : []),
+          ...(p > 0 ? [[p, 'Tu as compté les pronoms : un pronom est un seul petit mot, sans nom.'] as const] : []),
         ]),
         hint: 'Trouve d’abord chaque sujet. Compte les noms du sujet seulement.',
         steps: [
@@ -787,21 +785,23 @@ function nomVerbeDraft(rng: Rng, level: Level): QuestionDraft {
       const k = rng.int(1, 3);
       const entries = pickN(rng, NOMS_VERBES, 4);
       const flags = rng.shuffle([0, 1, 2, 3].map((i) => i < k));
-      const lines = entries.map((x, i) => `${flags[i] ? x.verbe : x.nom} (mot à étudier : ${x.mot})`);
+      const lines = entries.map((x, i) => `${flags[i] ? x.texte.verbe : x.texte.nom} (mot à étudier : ${x.mot})`);
+      const verbes = entries.filter((_, i) => flags[i]).map((x) => `« ${x.texte.hier} »`);
       return {
         prompt: 'Lis ce texte. Dans combien de phrases le mot à étudier est-il un verbe ?',
-        figure: document('Quelques phrases', lines),
+        figure: document('Au village', lines),
         answer: num(k),
         traps: numTraps(r(k), [
           [4 - k, 'Tu as compté les noms au lieu des verbes.'],
-          [k + 1, 'Tu en as compté un de trop : regarde le mot placé avant chaque mot à étudier.'],
-          [k - 1, 'Il t’en manque un : un mot qui change avec le sujet est un verbe, même s’il ressemble à un nom.'],
+          [k + 1, 'Tu en as compté un de trop. Ajoute « hier » : un nom ne change pas.'],
+          [k - 1, 'Il t’en manque un. Cherche qui fait l’action, puis ajoute « hier ».'],
         ]),
-        hint: 'Regarde le mot juste avant. Est-ce un déterminant ou un pronom ?',
+        hint: 'Ajoute « hier » devant chaque phrase. Le mot à étudier change-t-il ?',
         steps: [
-          'Lis chaque ligne. Regarde le mot avant le mot à étudier.',
-          'Garde les lignes où « il » ou « elle » le précède.',
-          `Compte les lignes gardées : **${k}**.`,
+          'Ajoute « hier » devant chaque phrase.',
+          'Regarde si le mot à étudier change : si oui, c’est un verbe.',
+          `Relis chaque verbe avec son sujet : ${verbes.join(' ; ')}.`,
+          `Compte ces verbes : **${k}**.`,
         ],
       };
     }

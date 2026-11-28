@@ -67,8 +67,8 @@ export const SENS_VS = {
       'comprenne et applique les différentes chaînes d’accords dans la phrase (dans le groupe nominal et entre groupe sujet et verbe)',
   },
   typesSujets: {
-    type: 'usage',
-    text: 'Quand tu écris, tu peux remplacer un groupe nominal sujet par « il » ou « elle ».',
+    type: 'savais-tu',
+    text: 'On peut remplacer un groupe nominal sujet par un pronom personnel sujet.',
     source: PROGRAMME,
     citation: 'Remplacer un groupe nominal sujet par un pronom personnel sujet',
   },
@@ -318,6 +318,13 @@ export interface NomVerbe {
   /** Phrase où le mot est un verbe (sujet il ou elle). */
   readonly verbe: string;
   readonly sujet: 'il' | 'elle';
+  /** Niveau 5 : deux phrases d'un même petit texte, qui commencent par le même mot. */
+  readonly texte: {
+    readonly nom: string;
+    readonly verbe: string;
+    /** Sujet et verbe de la phrase « verbe », tels qu'on les dit après « hier ». */
+    readonly hier: string;
+  };
 }
 
 export const NOMS_VERBES: readonly NomVerbe[] = [
@@ -328,6 +335,11 @@ export const NOMS_VERBES: readonly NomVerbe[] = [
     verbeDuNom: 'range',
     verbe: 'Il élève des lapins.',
     sujet: 'il',
+    texte: {
+      nom: 'Le maître aide un élève.',
+      verbe: 'Le fermier élève des lapins.',
+      hier: 'le fermier élevait',
+    },
   },
   {
     mot: 'ferme',
@@ -336,6 +348,11 @@ export const NOMS_VERBES: readonly NomVerbe[] = [
     verbeDuNom: 'est',
     verbe: 'Il ferme la porte.',
     sujet: 'il',
+    texte: {
+      nom: 'Le chien court vers la grande ferme.',
+      verbe: 'Le gardien ferme la grille.',
+      hier: 'le gardien fermait',
+    },
   },
   {
     mot: 'garde',
@@ -344,6 +361,11 @@ export const NOMS_VERBES: readonly NomVerbe[] = [
     verbeDuNom: 'ouvre',
     verbe: 'Elle garde son petit frère.',
     sujet: 'elle',
+    texte: {
+      nom: 'Mamie salue le vieux garde.',
+      verbe: 'Mamie garde les enfants.',
+      hier: 'Mamie gardait',
+    },
   },
   {
     mot: 'marche',
@@ -352,6 +374,11 @@ export const NOMS_VERBES: readonly NomVerbe[] = [
     verbeDuNom: 'est',
     verbe: 'Il marche vers l’école.',
     sujet: 'il',
+    texte: {
+      nom: 'La petite marche est cassée.',
+      verbe: 'La factrice marche vers la mairie.',
+      hier: 'la factrice marchait',
+    },
   },
   {
     mot: 'danse',
@@ -360,6 +387,11 @@ export const NOMS_VERBES: readonly NomVerbe[] = [
     verbeDuNom: 'est',
     verbe: 'Elle danse sur la scène.',
     sujet: 'elle',
+    texte: {
+      nom: 'Au bal, la dernière danse commence.',
+      verbe: 'Au bal, Lina danse.',
+      hier: 'Lina dansait',
+    },
   },
   {
     mot: 'pêche',
@@ -368,6 +400,11 @@ export const NOMS_VERBES: readonly NomVerbe[] = [
     verbeDuNom: 'est',
     verbe: 'Il pêche un gros poisson.',
     sujet: 'il',
+    texte: {
+      nom: 'Mon voisin mange une pêche.',
+      verbe: 'Mon voisin pêche dans la rivière.',
+      hier: 'mon voisin pêchait',
+    },
   },
   {
     mot: 'visite',
@@ -376,6 +413,11 @@ export const NOMS_VERBES: readonly NomVerbe[] = [
     verbeDuNom: 'commence',
     verbe: 'Elle visite le château.',
     sujet: 'elle',
+    texte: {
+      nom: 'La première visite commence.',
+      verbe: 'La classe visite le moulin.',
+      hier: 'la classe visitait',
+    },
   },
   {
     mot: 'rêve',
@@ -384,6 +426,11 @@ export const NOMS_VERBES: readonly NomVerbe[] = [
     verbeDuNom: 'est',
     verbe: 'Elle rêve de voyage.',
     sujet: 'elle',
+    texte: {
+      nom: 'Au lit, Tom raconte son beau rêve.',
+      verbe: 'Au lit, Tom rêve de voyages.',
+      hier: 'Tom rêvait',
+    },
   },
   {
     mot: 'joue',
@@ -392,6 +439,11 @@ export const NOMS_VERBES: readonly NomVerbe[] = [
     verbeDuNom: 'est',
     verbe: 'Elle joue au ballon.',
     sujet: 'elle',
+    texte: {
+      nom: 'Sur la place, le froid pique sa joue.',
+      verbe: 'Sur la place, Zoé joue au ballon.',
+      hier: 'Zoé jouait',
+    },
   },
   {
     mot: 'plante',
@@ -400,6 +452,11 @@ export const NOMS_VERBES: readonly NomVerbe[] = [
     verbeDuNom: 'a',
     verbe: 'Il plante un arbre.',
     sujet: 'il',
+    texte: {
+      nom: 'Le jardinier arrose la plante.',
+      verbe: 'Le jardinier plante un arbre.',
+      hier: 'le jardinier plantait',
+    },
   },
   {
     mot: 'porte',
@@ -408,6 +465,11 @@ export const NOMS_VERBES: readonly NomVerbe[] = [
     verbeDuNom: 'est',
     verbe: 'Il porte un sac.',
     sujet: 'il',
+    texte: {
+      nom: 'Il repeint la porte.',
+      verbe: 'Il prend le sac et le porte.',
+      hier: 'il le portait',
+    },
   },
   {
     mot: 'cuisine',
@@ -416,6 +478,11 @@ export const NOMS_VERBES: readonly NomVerbe[] = [
     verbeDuNom: 'sent',
     verbe: 'Il cuisine un gâteau.',
     sujet: 'il',
+    texte: {
+      nom: 'À midi, papi lave la grande cuisine.',
+      verbe: 'À midi, papi cuisine un gâteau.',
+      hier: 'papi cuisinait',
+    },
   },
   {
     mot: 'brosse',
@@ -424,5 +491,10 @@ export const NOMS_VERBES: readonly NomVerbe[] = [
     verbeDuNom: 'est',
     verbe: 'Elle brosse ses cheveux.',
     sujet: 'elle',
+    texte: {
+      nom: 'Elle cherche sa petite brosse.',
+      verbe: 'Elle voit son chien et le brosse.',
+      hier: 'elle le brossait',
+    },
   },
 ];

@@ -329,6 +329,70 @@ describe('repasse du chapitre', () => {
     ]);
   });
 
+  it('types de sujets : chaque bulle qui compte les noms dit la règle', () => {
+    const regle = /aucun, donc c’est un pronom|un seul, donc un groupe nominal|plusieurs, donc « plusieurs noms »/;
+    for (const level of [1, 2, 3, 4] as const)
+      each('fcm1-types-sujets', level, (q) => {
+        const bulles = q.steps.filter((b) => /(Compte les noms|Cherche un nom)/.test(b));
+        expect(bulles.length, q.prompt).toBeGreaterThanOrEqual(1);
+        for (const b of bulles) expect(b).toMatch(regle);
+      });
+  });
+
+  it('types de sujets : le piège des pronoms vaut aussi pour « je », « tu » et « vous »', () => {
+    const whys = new Set<string>();
+    each('fcm1-types-sujets', 5, (q) => {
+      for (const t of q.traps) if (t.why.includes('les pronoms')) whys.add(t.why);
+    });
+    expect([...whys]).toEqual(['Tu as compté les pronoms : un pronom est un seul petit mot, sans nom.']);
+  });
+
+  it('types de sujets : « à quoi ça sert » ne dit rien de plus que sa citation', () => {
+    expect(skills.find((s) => s.id === 'fcm1-types-sujets')?.sens?.map((s) => s.text)).toEqual([
+      'On peut remplacer un groupe nominal sujet par un pronom personnel sujet.',
+    ]);
+  });
+
+  const motsDe = (phrase: string) => phrase.replace(/[.,]/g, '').split(' ');
+
+  it('nom ou verbe, niveau 5 : ni le premier mot ni « il / elle » devant le mot ne tranchent', () => {
+    const premiers = (phrases: string[]) => phrases.map((p) => motsDe(p)[0]).sort();
+    expect(premiers(NOMS_VERBES.map((e) => e.texte.verbe))).toEqual(premiers(NOMS_VERBES.map((e) => e.texte.nom)));
+    for (const e of NOMS_VERBES) {
+      expect(motsDe(e.texte.verbe)[0], e.mot).toBe(motsDe(e.texte.nom)[0]);
+      for (const phrase of [e.texte.nom, e.texte.verbe]) {
+        const mots = motsDe(phrase);
+        expect(
+          mots.filter((m) => m === e.mot),
+          phrase,
+        ).toHaveLength(1);
+        expect(['il', 'elle'], phrase).not.toContain(mots[mots.indexOf(e.mot) - 1]?.toLowerCase());
+      }
+      const sansAccent = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '');
+      expect(sansAccent(e.texte.hier), e.mot).toMatch(new RegExp(`${sansAccent(e.mot).slice(0, -1)}ait$`));
+    }
+    // « le » devant le mot : devant un verbe (« et le porte ») comme devant un nom (« le vieux garde »).
+    const avant = (phrases: [string, string][]) => phrases.map(([p, mot]) => motsDe(p)[motsDe(p).indexOf(mot) - 1]);
+    expect(avant(NOMS_VERBES.map((e) => [e.texte.verbe, e.mot]))).toContain('le');
+    expect(avant(NOMS_VERBES.map((e) => [e.texte.nom, e.mot]))).toContain('la');
+  });
+
+  it('nom ou verbe, niveau 5 : le total compte les verbes, nommés avec leur sujet après « hier »', () => {
+    const totaux = new Set<string>();
+    for (let seed = 0; seed < 500; seed++) {
+      const q = generate('fcm1-nom-ou-verbe', 5, seed);
+      const textes = lines(q).map((l) => l.replace(/ \(mot à étudier : .+\)$/, ''));
+      const verbes = NOMS_VERBES.filter((e) => textes.includes(e.texte.verbe));
+      const noms = NOMS_VERBES.filter((e) => textes.includes(e.texte.nom));
+      expect(verbes.length + noms.length).toBe(4);
+      expect(check(q, { kind: 'number', text: String(verbes.length) }).correct, `graine ${seed}`).toBe(true);
+      for (const e of verbes) expect(q.steps.join(' ')).toContain(`« ${e.texte.hier} »`);
+      expect(q.steps.join(' ')).not.toMatch(/« (il|elle) » le précède/);
+      totaux.add(String(verbes.length));
+    }
+    expect([...totaux].sort()).toEqual(['1', '2', '3']);
+  });
+
   it('nom ou verbe, niveau 4 : un autre mot est écarté avec « hier », jamais avec une règle d’accord fausse', () => {
     const mots = new Set<string>();
     for (let seed = 0; seed < 1000; seed++) {
