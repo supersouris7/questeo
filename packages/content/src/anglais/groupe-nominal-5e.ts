@@ -175,7 +175,8 @@ const how = (rng: Rng): Gapped => {
 };
 const offer = (rng: Rng): Gapped => {
   const n = rng.pick(OFFERS);
-  const sentence = coin(rng) ? `Would you like … ${n.en}?` : `Can I have … ${n.en}, please?`;
+  // Phrases affirmatives : dans une question d’offre ou de demande, « any » serait juste aussi.
+  const sentence = coin(rng) ? `Please have … ${n.en}.` : `I’d like … ${n.en}, please.`;
   return {
     sentence,
     right: 'some',
@@ -190,7 +191,7 @@ function quantifierChoose(rng: Rng): QuestionDraft {
   const g = rng.pick([negative, how, offer, offer])(rng);
   const others = (['much', 'many', 'some'] as const).filter((q) => q !== g.right);
   return {
-    prompt: `Complète d’après la règle du cours : « ${g.sentence} » (${g.cue})`,
+    prompt: `Complète avec un quantifieur du cours : « ${g.sentence} » (${g.cue})`,
     answer: typed([g.right]),
     traps: textTraps(
       [g.right],
@@ -209,7 +210,7 @@ function quantifierDocument(rng: Rng): QuestionDraft {
     .shuffle([
       [`How … ${a.en} have we got?`, `question sur ce qu’il reste ${a.of}`, 'many'],
       [`We haven’t got … ${c.en}.`, `il n’y a pas beaucoup ${c.of}`, 'much'],
-      [`Can you buy … ${wanted.en}, please?`, `demande d’achat ${wanted.of}`, 'some'],
+      [`I’d like … ${wanted.en}, please.`, `demande polie ${wanted.of}`, 'some'],
       [`There aren’t … ${b.en}.`, `il n’y a pas beaucoup ${b.of}`, 'many'],
       [`How … ${d.en} do we need?`, `question sur le besoin ${d.of}`, 'much'],
     ] as const)
@@ -751,7 +752,9 @@ function antonymLetter(rng: Rng): QuestionDraft {
 function antonymPrefix(rng: Rng): QuestionDraft {
   const [base, accepted] = rng.pick(PREFIX_PAIRS);
   const right = at(accepted, 0);
-  const wrong = ['un', 'in', 'im', 'il', 'ir', 'dis'].map((p) => ({
+  // Pas de piège « unsocial » : refusé comme toute autre réponse, sans commentaire sur ce mot.
+  const prefixes = ['un', 'in', 'im', 'il', 'ir', 'dis'].filter((p) => `${p}${base}` !== 'unsocial');
+  const wrong = prefixes.map((p) => ({
     text: `${p}${base}`,
     why: 'Ce n’est pas le mot du cours : retrouve dans le mémo le préfixe de ce mot.',
   }));
@@ -778,7 +781,7 @@ interface Opposite {
 const opposite = (line: string, from: string, answer: string): Opposite => ({ line, from, answer });
 export const OPPOSITES: readonly Opposite[] = [
   opposite('This village is not urban, it is …', 'urban', 'rural'),
-  opposite('With this headset you do not see the real world, you see what is called … reality', 'real', 'virtual'),
+  opposite('This is not the real world, it is … reality', 'real', 'virtual'),
   opposite('Your plan is not possible, it is …', 'possible', 'impossible'),
   opposite('Parking here is not legal, it is …', 'legal', 'illegal'),
   opposite('The verb “play” is regular, but the verb “go” is …', 'regular', 'irregular'),

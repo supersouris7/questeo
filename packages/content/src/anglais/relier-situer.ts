@@ -34,25 +34,16 @@ export interface Joined {
   /** Fin de la phrase. */
   readonly end: string;
 }
-/** Phrase dont le sens français départage les mots : « whereas » resterait grammatical là où l’on attend « mais ». */
-export interface Translated extends Joined {
-  readonly fr: string;
-}
 const joined = (start: string, end: string): Joined => ({ start, end });
-const translated = (start: string, end: string, fr: string): Translated => ({ start, end, fr });
 /** Une même personne : une idée vient contredire l’autre. */
-export const CONCESSIONS: readonly Translated[] = [
-  translated('I am tired,', 'I want to finish the game.', 'Je suis fatigué, mais je veux finir la partie.'),
-  translated('She wants to play,', 'she has homework.', 'Elle veut jouer, mais elle a des devoirs.'),
-  translated('My bike is old,', 'it is very fast.', 'Mon vélo est vieux, mais il est très rapide.'),
-  translated('I want to come,', 'I am busy today.', 'Je veux venir, mais je suis occupé aujourd’hui.'),
-  translated('The film is long,', 'it is not boring.', 'Le film est long, mais il n’est pas ennuyeux.'),
-  translated('He is small,', 'he is very strong.', 'Il est petit, mais il est très fort.'),
-  translated(
-    'I like this song,',
-    'I don’t know the words.',
-    'J’aime cette chanson, mais je ne connais pas les paroles.',
-  ),
+export const CONCESSIONS: readonly Joined[] = [
+  joined('I am tired,', 'I want to finish the game.'),
+  joined('She wants to play,', 'she has homework.'),
+  joined('My bike is old,', 'it is very fast.'),
+  joined('I want to come,', 'I am busy today.'),
+  joined('The film is long,', 'it is not boring.'),
+  joined('He is small,', 'he is very strong.'),
+  joined('I like this song,', 'I don’t know the words.'),
 ];
 /** Deux sujets que l’on compare. */
 export const COMPARISONS: readonly Joined[] = [
@@ -65,30 +56,14 @@ export const COMPARISONS: readonly Joined[] = [
   joined('My room is tidy,', 'my brother’s room is a mess.'),
 ];
 /** Une seconde idée, après un point-virgule, qui s’oppose à la première. */
-export const HOWEVERS: readonly Translated[] = [
-  translated('It was raining;', 'we played outside.', 'Il pleuvait ; cependant, nous avons joué dehors.'),
-  translated(
-    'The museum was closed;',
-    'we saw the garden.',
-    'Le musée était fermé ; cependant, nous avons vu le jardin.',
-  ),
-  translated(
-    'The test was hard;',
-    'I did my best.',
-    'Le contrôle était difficile ; cependant, j’ai fait de mon mieux.',
-  ),
-  translated(
-    'We were very late;',
-    'the film had not started.',
-    'Nous étions très en retard ; cependant, le film n’avait pas commencé.',
-  ),
-  translated('The castle is old;', 'it is still beautiful.', 'Le château est vieux ; cependant, il est toujours beau.'),
-  translated(
-    'They did not win;',
-    'they had a great day.',
-    'Ils n’ont pas gagné ; cependant, ils ont passé une super journée.',
-  ),
-  translated('The shop is far;', 'we can walk there.', 'Le magasin est loin ; cependant, nous pouvons y aller à pied.'),
+export const HOWEVERS: readonly Joined[] = [
+  joined('It was raining;', 'we played outside.'),
+  joined('The museum was closed;', 'we saw the garden.'),
+  joined('The test was hard;', 'I did my best.'),
+  joined('We were very late;', 'the film had not started.'),
+  joined('The castle is old;', 'it is still beautiful.'),
+  joined('They did not win;', 'they had a great day.'),
+  joined('The shop is far;', 'we can walk there.'),
 ];
 
 const LINK_WHY: Readonly<Record<string, string>> = {
@@ -165,14 +140,13 @@ function linkMeaning(rng: Rng): QuestionDraft {
   };
 }
 
-/** Saisie en document : la phrase française donne le sens. Pas de comparaison ici (« but » y serait juste aussi). */
 type Typed = 'but' | 'however';
 const TYPED: readonly Typed[] = ['but', 'however'];
-const TYPED_POOL: Readonly<Record<Typed, readonly Translated[]>> = { but: CONCESSIONS, however: HOWEVERS };
 
 /**
- * Saisie sans traduction : le mot se déduit de la phrase anglaise seule. On garde les phrases où la seconde idée
- * contrarie un souhait ou un goût (« whereas » n’y convient pas).
+ * Saisie sans traduction (niveaux 4 et 5) : le mot se déduit de la phrase anglaise seule. Pas de comparaison ici
+ * (« but » y serait juste aussi) ; on garde les phrases où la seconde idée contrarie un souhait ou un goût
+ * (« whereas » n’y convient pas).
  */
 const ALONE_STARTS: readonly string[] = ['I am tired,', 'She wants to play,', 'I want to come,', 'I like this song,'];
 export const ALONE_POOL: Readonly<Record<Typed, readonly Joined[]>> = {
@@ -216,18 +190,18 @@ const NAMES = ['Ana', 'Lisa', 'Maya', 'Tom', 'Emir', 'Paul'] as const;
 
 function linkDocument(rng: Rng): QuestionDraft {
   const name = rng.pick(NAMES);
-  const rows = rng.shuffle(TYPED.flatMap((link) => some(rng, TYPED_POOL[link], 2).map((j) => ({ j, link }))));
+  const rows = rng.shuffle(TYPED.flatMap((link) => some(rng, ALONE_POOL[link], 2).map((j) => ({ j, link }))));
   return {
-    prompt: 'Lis le message et sa traduction, puis complète chaque trou avec le mot de contraste du cours.',
+    prompt: 'Lis le message, puis complète chaque trou avec le mot de contraste du cours.',
     figure: document(
       `Message from ${name}`,
-      rows.flatMap((r, i) => [show(r.j, `(${i + 1})`), `= ${r.j.fr}`]),
+      rows.map((r, i) => show(r.j, `(${i + 1})`)),
     ),
     answer: { kind: 'cloze', parts: numbered(rows.length), blanks: blanksOf(rows.map((r) => [r.link])) },
-    hint: 'Pour chaque trou, relis la phrase française placée en dessous.',
+    hint: 'Pour chaque trou, comprends les deux idées, puis regarde la ponctuation.',
     steps: [
-      'Lis chaque phrase française avant de remplir son trou.',
-      'Associe « mais » et « cependant » au bon mot anglais.',
+      'Traduis toi-même les deux idées de chaque phrase.',
+      'Regarde le signe avant chaque trou, puis le signe après.',
       ok(rows.map((r) => r.link)),
     ],
   };
@@ -649,9 +623,9 @@ export const CASES: readonly Case[] = [
   ),
 ];
 const WHY_DEGREE: Readonly<Record<Degree | 'many', string>> = {
-  very: 'very renforce un adjectif : il ne dit pas qu’il y en a trop et ne va pas devant than.',
+  very: 'very veut dire « très », et non « trop ». On ne l’emploie pas devant than, qui veut dire « que ».',
   too: 'too veut dire trop : plus que ce que l’on veut.',
-  much: 'much renforce un adjectif au comparatif, devant than.',
+  much: 'much renforce un comparatif, comme taller (plus grand), souvent suivi de than (que).',
   many: 'many compte des choses : il ne renforce pas un adjectif.',
 };
 const DEGREE_STEP: Readonly<Record<Degree, string>> = {

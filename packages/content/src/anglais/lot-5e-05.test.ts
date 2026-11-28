@@ -111,7 +111,7 @@ describe('anglais 5e : groupe nominal et pronoms, relier et situer', () => {
       expect(text(q, n.countable ? 'many' : 'much'), q.prompt).toBe(true);
       expect(text(q, n.countable ? 'much' : 'many'), q.prompt).toBe(false);
     }
-    expect(text(find('a5-quantifieurs', 4, 'Would you like'), 'some')).toBe(true);
+    expect(text(find('a5-quantifieurs', 4, 'I’d like'), 'some')).toBe(true);
   });
 
   it('pronoms réfléchis : « hisself » et le pronom complément refusés', () => {
@@ -197,16 +197,19 @@ describe('anglais 5e : groupe nominal et pronoms, relier et situer', () => {
     }
   });
 
-  it('contraste : dans le document, la phrase française désigne « mais » ou « cependant », jamais « alors que »', () => {
-    const all = [...CONCESSIONS, ...HOWEVERS];
-    for (const j of all) expect(j.fr).not.toContain('alors que');
-    for (const j of CONCESSIONS) expect(j.fr, j.start).toMatch(/, mais /);
-    for (const j of HOWEVERS) expect(j.fr, j.start).toMatch(/; cependant, /);
-    for (const q of questions('a5-contraste', 5))
-      expect(
-        all.filter((j) => JSON.stringify(q.figure).includes(j.fr)),
-        q.prompt,
-      ).toHaveLength(4);
+  it('contraste : au niveau 5, aucune aide de plus qu’au niveau 4, quatre trous sans traduction', () => {
+    const pool = [...ALONE_POOL.but, ...ALONE_POOL.however];
+    for (const q of questions('a5-contraste', 5)) {
+      if (q.answer.kind !== 'cloze' || q.figure?.kind !== 'document') throw new Error('document à trous attendu');
+      expect([q.prompt, q.hint, ...q.figure.lines].join(' ')).not.toMatch(/\bmais\b|cependant|alors que|traduction/);
+      for (const [i, line] of q.figure.lines.entries()) {
+        const j = pool.find((x) => line.startsWith(x.start) && line.endsWith(x.end));
+        expect(j, line).toBeDefined();
+        const blank = q.answer.blanks[i]!;
+        if (blank.mode !== 'text') throw new Error('saisie attendue');
+        expect(blank.accepted).toEqual([j!.start.endsWith(';') ? 'however' : 'but']);
+      }
+    }
   });
 
   it('contraste : au niveau 4, ni traduction ni mot français, et jamais l’exemple du mémo', () => {
@@ -217,7 +220,6 @@ describe('anglais 5e : groupe nominal et pronoms, relier et situer', () => {
       expect(j, q.prompt).toBeDefined();
       expect(memo).not.toContain(j!.start);
       expect([q.prompt, q.hint].join(' ')).not.toMatch(/\bmais\b|cependant|alors que/);
-      for (const x of [...CONCESSIONS, ...HOWEVERS]) expect(q.prompt).not.toContain(x.fr);
     }
   });
 
@@ -235,14 +237,20 @@ describe('anglais 5e : groupe nominal et pronoms, relier et situer', () => {
     }
   });
 
-  it('quantifieurs : proposer ou demander attend un seul mot, sans renvoyer au mémo', () => {
-    const offers = questions('a5-quantifieurs', 4).filter((q) => /Would you like|Can I have/.test(q.prompt));
+  it('quantifieurs : proposer ou demander attend un seul mot, dans une phrase où « any » est faux', () => {
+    const offers = questions('a5-quantifieurs', 4).filter((q) => /Please have|I’d like/.test(q.prompt));
     expect(offers.length).toBeGreaterThan(0);
     for (const q of offers) {
       expect(q.prompt).toContain('en un seul mot');
-      expect(q.prompt).not.toMatch(/mémo|proposer|demander/);
-      expect(q.prompt).not.toMatch(/un peu|quelques/);
+      expect(q.prompt).toContain('quantifieur du cours');
+      expect(q.prompt).not.toMatch(/mémo|proposer|demander|un peu|quelques|\?/);
+      expect(text(q, 'some'), q.prompt).toBe(true);
+      expect(text(q, 'any'), q.prompt).toBe(false);
     }
+    for (const q of [...questions('a5-quantifieurs', 4), ...questions('a5-quantifieurs', 5)])
+      expect(`${q.prompt} ${q.answer.kind === 'cloze' ? q.answer.parts.join('…') : ''}`).not.toMatch(
+        /Would you like|Can I have|Can you buy/,
+      );
   });
 
   it('antonymes : chaque mot à préfixe attendu est montré dans le mémo', () => {
