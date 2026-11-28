@@ -87,6 +87,20 @@ export const GLOSSAIRE: readonly SubjectTerm[] = [
     example: 'Monday commence par un M majuscule.',
   },
   {
+    id: 'veille',
+    word: 'veille',
+    forms: ['veille'],
+    definition: 'Le jour juste avant un autre jour.',
+    example: 'La veille de mardi, c’est lundi.',
+  },
+  {
+    id: 'lendemain',
+    word: 'lendemain',
+    forms: ['lendemain'],
+    definition: 'Le jour juste après un autre jour.',
+    example: 'Le lendemain de lundi, c’est mardi.',
+  },
+  {
     id: 'in-temps',
     word: 'in',
     forms: ['in'],

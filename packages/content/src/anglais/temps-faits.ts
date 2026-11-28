@@ -1,8 +1,8 @@
 /**
  * Anglais CM1, « Le temps qui passe » (lot an-cm1-03) : données citées.
  * Chaque fait porte l'identifiant de sa source (registre `sources.ts`) et une citation exacte du texte consulté
- * le 24/11/2026 (copies d'archive web.archive.org des pages et fiches PDF du British Council ; programmes
- * officiels du cycle 3 et du collège).
+ * le 24/11/2026, puis le 27/11/2026 pour la repasse (copies d'archive web.archive.org des pages et fiches PDF du British Council ; programmes
+ * officiels de langues vivantes et du collège).
  */
 import type { Fait } from './presentation-faits.ts';
 
@@ -75,7 +75,7 @@ export const WEATHER: readonly Word[] = [
   { en: 'snowy', fr: 'neigeux', alt: ['snowing'], typo: 'snowey' },
   { en: 'stormy', fr: 'orageux', typo: 'stormi' },
   { en: 'foggy', fr: 'avec du brouillard', typo: 'fogy' },
-  { en: 'hot', fr: 'chaud', typo: 'hote' },
+  { en: 'hot', fr: 'chaud', alt: ['warm'], typo: 'hote' },
   { en: 'cold', fr: 'froid', typo: 'colde' },
 ];
 
@@ -98,16 +98,17 @@ export const DATES: readonly SourcedDate[] = [
 
 export const FAITS: readonly Fait[] = [
   {
-    id: 'programme-annonce',
-    sourceId: 'cycle3-2020',
-    quote: 'Faire une brève annonce (date, anniversaire,',
-    claim: 'Au cycle 3, l’élève annonce une date ou un anniversaire.',
+    id: 'programme-date',
+    sourceId: 'lve-cm-2026',
+    quote: 'Situer dans le temps : exprimer une date ou des repères temporels simples.',
+    claim: 'Au CM1, l’élève dit une date et des repères de temps simples.',
   },
   {
     id: 'programme-lexique',
-    sourceId: 'cycle3-2020',
-    quote: "Les champs lexicaux abordés se rapportent à l'environnement immédiat de l'élève.",
-    claim: 'Couleurs, jours, mois, saisons et météo relèvent de l’environnement immédiat de l’élève.',
+    sourceId: 'lve-cm-2026',
+    quote:
+      'Reconnaitre quelques mots simples du champ lexical de l’environnement proche (famille, école, activités de loisirs, météo,',
+    claim: 'La météo fait partie des mots de l’environnement proche à reconnaître au CM1.',
   },
   {
     id: 'couleurs-1',
@@ -228,7 +229,7 @@ export const FAITS: readonly Fait[] = [
     id: 'date-ordinal',
     sourceId: 'bc-prepositions-time',
     quote: 'dates on 30 July on the second of August',
-    claim: 'À l’oral, « 2 August » se dit « the second of August ».',
+    claim: '« 2 August » peut se dire « the second of August ».',
   },
   {
     id: 'date-ordinaux-programme',
@@ -271,6 +272,12 @@ export const FAITS: readonly Fait[] = [
     sourceId: 'bck-weather-live',
     quote: "Today it's hot and sunny in Brazil.",
     claim: 'Pour dire le temps : It’s hot and sunny.',
+  },
+  {
+    id: 'meteo-doux',
+    sourceId: 'bc-prepositions-time',
+    quote: 'In spring, the weather is warmer.',
+    claim: 'warm qualifie le temps (« warmer » : plus chaud) ; la saisie « warm » est acceptée.',
   },
   {
     id: 'meteo-question',

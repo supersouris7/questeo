@@ -2,29 +2,23 @@ matiere	classe	chapitre	notion	type	score	indices	mots_non_definis
 anglais	cm1	acm1-ecouter-comprendre	acm1-consignes	entrainement	2.12	etapes-nombre=150, bulle-sans-action=129, bulle-chargee=24, consigne-sans-verbe=14, memo-long=1	
 anglais	cm1	acm1-ecouter-comprendre	acm1-reperes-uk	entrainement	2.07	etapes-nombre=150, bulle-sans-action=150, consigne-sans-verbe=3, phrase-longue=6, memo-long=1	
 anglais	cm1	acm1-se-presenter	acm1-saluer	entrainement	2.03	bulle-sans-action=150, etapes-nombre=60, bulle-chargee=46, phrase-longue=46, peu-de-variantes=1, memo-long=1	
-anglais	cm1	acm1-temps	acm1-meteo	entrainement	2.01	etapes-nombre=120, bulle-sans-action=150, phrase-longue=31, memo-long=1	
 anglais	cm1	acm1-ecouter-comprendre	acm1-mots-cles	entrainement	2.01	etapes-nombre=150, bulle-sans-action=150, memo-long=1	
 anglais	cm1	acm1-se-presenter	acm1-nombres-1-31	entrainement	2.01	etapes-nombre=120, bulle-sans-action=150, phrase-longue=30, memo-long=1	
 anglais	cm1	acm1-se-presenter	acm1-where-live	entrainement	2.01	etapes-nombre=90, bulle-sans-action=150, phrase-longue=30, peu-de-variantes=1, bulle-chargee=30, memo-long=1	
-anglais	cm1	acm1-temps	acm1-saisons	entrainement	1.93	etapes-nombre=108, bulle-sans-action=150, phrase-longue=30, peu-de-variantes=1	
 anglais	cm1	acm1-famille-corps	acm1-corps	entrainement	1.87	etapes-nombre=99, bulle-sans-action=150, phrase-longue=31, memo-long=1	
 anglais	cm1	acm1-gouts-capacites	acm1-sports-loisirs	entrainement	1.86	etapes-nombre=120, bulle-sans-action=150, bulle-chargee=7, memo-long=1, phrase-longue=1	
 anglais	cm1	acm1-famille-corps	acm1-have-got	entrainement	1.81	etapes-nombre=120, bulle-sans-action=150, memo-long=1	
-anglais	cm1	acm1-temps	acm1-mois	entrainement	1.73	etapes-nombre=108, bulle-sans-action=150, memo-long=1	
 anglais	cm1	acm1-ecouter-comprendre	acm1-nombres-entendus	entrainement	1.73	etapes-nombre=108, bulle-sans-action=150, memo-long=1	
-anglais	cm1	acm1-temps	acm1-jours	entrainement	1.72	etapes-nombre=108, bulle-sans-action=150	
 anglais	cm1	acm1-gouts-capacites	acm1-animaux	entrainement	1.69	etapes-nombre=102, bulle-sans-action=150, memo-long=1	
 anglais	cm1	acm1-famille-corps	acm1-famille	entrainement	1.68	etapes-nombre=102, bulle-sans-action=150	
 anglais	cm1	acm1-be	acm1-be-present	entrainement	1.63	bulle-sans-action=150, etapes-nombre=64, phrase-longue=30, memo-long=1	
 anglais	cm1	acm1-gouts-capacites	acm1-can	entrainement	1.61	etapes-nombre=90, bulle-sans-action=150, memo-long=1	
-anglais	cm1	acm1-temps	acm1-couleurs	entrainement	1.61	etapes-nombre=90, bulle-sans-action=150, memo-long=1	
 anglais	cm1	acm1-se-presenter	acm1-how-old	entrainement	1.61	etapes-nombre=90, bulle-sans-action=150, peu-de-variantes=1, memo-long=1	
 anglais	cm1	acm1-be	acm1-questions-be	entrainement	1.61	etapes-nombre=90, bulle-sans-action=150, memo-long=1	
 anglais	cm1	acm1-famille-corps	acm1-vetements	entrainement	1.61	etapes-nombre=90, bulle-sans-action=150, memo-long=1	
 anglais	cm1	acm1-se-presenter	acm1-your-name	entrainement	1.61	etapes-nombre=90, bulle-sans-action=150, peu-de-variantes=1, memo-long=1	
 anglais	cm1	acm1-gouts-capacites	acm1-like	entrainement	1.46	etapes-nombre=68, bulle-sans-action=150, memo-long=1	
 anglais	cm1	acm1-possessifs	acm1-possessifs	entrainement	1.44	bulle-sans-action=150, etapes-nombre=48, phrase-longue=18	
-anglais	cm1	acm1-temps	acm1-date	entrainement	1.41	etapes-nombre=46, bulle-sans-action=150, bulle-chargee=14, memo-long=1	
 anglais	cm1	acm1-be	acm1-pronoms-sujets	entrainement	1.29	bulle-sans-action=150, etapes-nombre=12, phrase-longue=30, memo-long=1	
 anglais	cm1	acm1-famille-corps	acm1-genitif	entrainement	1.01	bulle-sans-action=150, memo-long=1	
 anglais	cm2	acm2-ecole-nourriture-animaux	acm2-some	entrainement	2.67	etapes-nombre=132, bulle-sans-action=150, phrase-longue=57, bulle-chargee=30, enonce-long=30, memo-long=1	
