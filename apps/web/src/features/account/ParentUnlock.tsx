@@ -7,16 +7,24 @@ const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'] as co
 
 /**
  * Déverrouillage de l'Espace parent : le code PIN (4 chiffres, au clavier ou à l'écran) s'il a
- * été choisi, sinon (ou s'il est oublié) le mot de passe du compte.
+ * été choisi, sinon (ou s'il est oublié) le mot de passe du compte, quand le compte en a un.
  */
 export function ParentUnlock({ onUnlocked }: { readonly onUnlocked: () => void }) {
   const { data: me } = useMe();
   const [usePassword, setUsePassword] = useState(false);
-  if (me?.hasPin && !usePassword) return <PinForm onUnlocked={onUnlocked} onForgot={() => setUsePassword(true)} />;
+  if (me?.hasPin && !usePassword) {
+    return <PinForm onUnlocked={onUnlocked} onForgot={me.noPassword ? undefined : () => setUsePassword(true)} />;
+  }
   return <PasswordForm onUnlocked={onUnlocked} hasPin={me?.hasPin ?? false} />;
 }
 
-function PinForm({ onUnlocked, onForgot }: { readonly onUnlocked: () => void; readonly onForgot: () => void }) {
+interface PinFormProps {
+  readonly onUnlocked: () => void;
+  /** Absent : compte sans mot de passe (portail). */
+  readonly onForgot: (() => void) | undefined;
+}
+
+function PinForm({ onUnlocked, onForgot }: PinFormProps) {
   const setMe = useSetMe();
   const [pin, setPin] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -97,9 +105,13 @@ function PinForm({ onUnlocked, onForgot }: { readonly onUnlocked: () => void; re
           ),
         )}
       </div>
-      <button type="button" onClick={onForgot} className="text-muted text-sm font-bold underline">
-        Code oublié ? Utiliser le mot de passe du compte
-      </button>
+      {onForgot ? (
+        <button type="button" onClick={onForgot} className="text-muted text-sm font-bold underline">
+          Code oublié ? Utiliser le mot de passe du compte
+        </button>
+      ) : (
+        <p className="text-muted text-center text-sm">Code oublié ? Demandez à l’administrateur de le réinitialiser.</p>
+      )}
     </div>
   );
 }

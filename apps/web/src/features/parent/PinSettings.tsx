@@ -36,7 +36,9 @@ export function PinSettings() {
       <p className="font-bold">
         Code PIN parent : {me?.hasPin ? 'choisi' : 'pas encore choisi (le mot de passe du compte est demandé)'}
       </p>
-      {!open ? (
+      {me?.noPassword ? (
+        <p className="text-muted">Pour changer de code, demandez à l’administrateur de le réinitialiser.</p>
+      ) : !open ? (
         <GameButton variant="surface" icon="icons-navigation-settings" onClick={() => setOpen(true)}>
           {me?.hasPin ? 'Changer le code PIN' : 'Choisir un code PIN'}
         </GameButton>

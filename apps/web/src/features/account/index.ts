@@ -20,6 +20,7 @@ export {
 } from './StudentScreens.tsx';
 export { joinFamily } from './api.ts';
 export { ParentGateProvider } from './ParentGate.tsx';
+export { PortalSignIn } from './portal.tsx';
 export { useParentGate } from './parentGate.ts';
 export { SignOutButton } from './SignOutButton.tsx';
 export { deleteFamily, exportFamily, lockParent, setParentPin, useMe, useSetMe } from './api.ts';
