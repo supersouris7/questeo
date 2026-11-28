@@ -188,23 +188,22 @@ describe('repasse du chapitre', () => {
     for (const g of groupes) expect(g).not.toMatch(/ (de|du|des|d’|à|au|aux) /);
   });
 
-  it('types de sujets, saisies : la consigne ne liste pas les réponses', () => {
-    for (const level of [3, 4] as const)
-      each('fcm1-types-sujets', level, (q) => expect(q.prompt).not.toMatch(/pronom|groupe nominal|plusieurs noms/i));
-  });
-
-  it('types de sujets, saisies : « sujet » ajouté au type reste juste', () => {
+  it('types de sujets, niveaux 3 et 4 : les trois réponses attendues sont proposées, chaque erreur expliquée', () => {
     for (const level of [3, 4] as const) {
-      const seen = new Set<string>();
+      const correct = new Set<number>();
       each('fcm1-types-sujets', level, (q) => {
-        for (const type of ['pronom personnel', 'groupe nominal']) {
-          if (!typed(q, type)) continue;
-          seen.add(type);
-          expect(typed(q, `${type} sujet`), q.prompt).toBe(true);
-          expect(typed(q, `un ${type} sujet`), q.prompt).toBe(true);
+        if (q.answer.kind !== 'choice') throw new Error('choix attendu');
+        expect(q.answer.options).toEqual(['un pronom personnel', 'un groupe nominal', 'plusieurs noms']);
+        const sujet = SUJETS.find((x) => q.prompt.toLowerCase().includes(`${x.s} ${x.reste}`.toLowerCase()));
+        expect(q.answer.correct, q.prompt).toBe(['pronom', 'gn', 'noms'].indexOf(sujet?.type ?? ''));
+        for (const index of [0, 1, 2]) {
+          const result = check(q, { kind: 'choice', index });
+          expect(result.correct).toBe(index === q.answer.correct);
+          if (!result.correct) expect(result.why).toContain(`Le sujet « ${sujet?.s} »`);
         }
+        correct.add(q.answer.correct);
       });
-      expect(seen.size).toBe(2);
+      expect(correct.size).toBe(3);
     }
   });
 
@@ -268,17 +267,54 @@ describe('repasse du chapitre', () => {
       each('fcm1-types-sujets', level, (q) => expect(JSON.stringify(q)).not.toContain('aucun nom ici'));
   });
 
-  it('« Qui est-ce qui » est suivi d’un verbe au singulier bien écrit', () => {
+  it('« Qui est-ce qui » : chaque question, relue en entier, est en bon français', () => {
     const questions = new Set<string>();
     for (const id of ['fcm1-groupe-sujet', 'fcm1-types-sujets'])
-      for (const level of [1, 3] as const)
-        each(id, level, (q) => {
-          for (const s of q.steps) {
-            const verbe = /« Qui est-ce qui (\p{L}+)/u.exec(s)?.[1];
-            if (verbe) questions.add(verbe);
+      for (const level of [1, 2, 3, 4, 5] as const)
+        for (let seed = 0; seed < 300; seed++)
+          for (const s of generate(id, level, seed).steps) {
+            const question = /« Qui est-ce qui (.+?) \? »/u.exec(s)?.[1];
+            if (question) questions.add(question);
           }
-        });
-    expect(questions).toContain('habite');
-    expect([...questions].filter((v) => /(en|ons|ez|ent)$/.test(v))).toEqual([]);
+    expect([...questions].sort((a, b) => a.localeCompare(b, 'fr'))).toEqual([
+      'aboie très fort',
+      'arrive à la maison',
+      'cache le soleil',
+      'chante dans la cour',
+      'chante très fort',
+      'court très vite',
+      'dort sur le canapé',
+      'dort sur le tapis',
+      'entre en classe',
+      'habite près de la mer',
+      'joue au ballon',
+      'joue dans la cour',
+      'joue du piano',
+      'lit un livre',
+      'lit une histoire',
+      'lit une histoire à la classe',
+      'mange à la cantine',
+      'nage dans le bocal',
+      'ouvre la porte',
+      'part en sortie',
+      'part en voyage',
+      'prépare le repas',
+      'range sa chambre',
+    ]);
+  });
+
+  it('nom ou verbe, niveau 4 : un autre mot est écarté avec « hier », jamais avec une règle d’accord fausse', () => {
+    const mots = new Set<string>();
+    for (let seed = 0; seed < 1000; seed++) {
+      const q = generate('fcm1-nom-ou-verbe', 4, seed);
+      expect(JSON.stringify(q.traps)).not.toContain('change avec le sujet');
+      for (const t of q.traps) {
+        if (!('text' in t) || !t.why.includes('« hier »')) continue;
+        expect(t.why).toBe(`« ${t.text} » ne change pas si tu ajoutes « hier » : ce n’est pas le verbe.`);
+        mots.add(t.text);
+      }
+    }
+    expect([...mots]).toEqual(expect.arrayContaining(['rouge', 'longue', 'ouverte', 'neuve', 'lapins']));
+    expect(mots.size).toBe(NOMS_VERBES.length * 2);
   });
 });

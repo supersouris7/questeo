@@ -459,20 +459,6 @@ const OPTION_LABEL: Record<TypeSujet, string> = {
   gn: 'un groupe nominal (un nom avec son déterminant)',
   noms: 'plusieurs noms (reliés par « et » ou une virgule)',
 };
-const ACCEPTED_TYPE: Record<TypeSujet, readonly string[]> = {
-  pronom: [
-    'pronom personnel',
-    'pronom',
-    'un pronom',
-    'un pronom personnel',
-    'pronom sujet',
-    'un pronom sujet',
-    'pronom personnel sujet',
-    'un pronom personnel sujet',
-  ],
-  gn: ['groupe nominal', 'un groupe nominal', 'gn', 'un gn', 'groupe nominal sujet', 'un groupe nominal sujet'],
-  noms: ['plusieurs noms', 'des noms', 'noms'],
-};
 const TYPES: readonly TypeSujet[] = ['pronom', 'gn', 'noms'];
 
 /** Pourquoi le sujet n'est pas de ce type (faux) alors qu'il est de l'autre (vrai). */
@@ -511,14 +497,24 @@ const observeType = (s: Sujet): string => {
   return `Compte les noms de « ${s.s} » : un seul.`;
 };
 
-const stepsType = (s: Sujet, action: 'Choisis' | 'Écris', pre?: string) => [
+const stepsType = (s: Sujet, pre?: string) => [
   pre
     ? `Efface « ${pre.slice(0, -1)} » : ce groupe dit quand.`
     : `Pose la question : « Qui est-ce qui ${quiReste(s.reste)} ? »`,
   `Repère le sujet : « ${s.s} ».`,
   observeType(s),
-  `${action} la réponse : **${TYPE_LABEL[s.type]}**.`,
+  `Choisis la réponse : **${TYPE_LABEL[s.type]}**.`,
 ];
+
+/** Les trois types à choisir, toujours dans le même ordre, sans leur définition (niveaux 3 et 4). */
+const choixType = (s: Sujet) => ({
+  answer: {
+    kind: 'choice' as const,
+    options: TYPES.map((t) => TYPE_LABEL[t]),
+    correct: TYPES.indexOf(s.type),
+  },
+  traps: TYPES.flatMap((t, option) => (t === s.type ? [] : [{ option, why: whyType(s, t) }])),
+});
 
 function typesSujetsDraft(rng: Rng, level: Level): QuestionDraft {
   switch (level) {
@@ -534,7 +530,7 @@ function typesSujetsDraft(rng: Rng, level: Level): QuestionDraft {
         answer,
         traps,
         hint: 'Cherche s’il y a un nom, et combien.',
-        steps: stepsType(s, 'Choisis'),
+        steps: stepsType(s),
       };
     }
     case 2: {
@@ -570,11 +566,10 @@ function typesSujetsDraft(rng: Rng, level: Level): QuestionDraft {
     case 3: {
       const s = rng.pick(SUJETS);
       return {
-        prompt: `Trouve le sujet et écris sa sorte : « ${phraseS(s)} »`,
-        answer: { kind: 'text', accepted: ACCEPTED_TYPE[s.type] },
-        traps: TYPES.filter((t) => t !== s.type).map((t) => textTrap(at(ACCEPTED_TYPE[t], 0), whyType(s, t))),
+        prompt: `Trouve le sujet, puis choisis sa sorte : « ${phraseS(s)} »`,
+        ...choixType(s),
         hint: 'Trouve d’abord le sujet. Compte ensuite ses noms.',
-        steps: stepsType(s, 'Écris'),
+        steps: stepsType(s),
       };
     }
     case 4: {
@@ -582,11 +577,10 @@ function typesSujetsDraft(rng: Rng, level: Level): QuestionDraft {
       const s = rng.pick(SUJETS);
       const pre = rng.pick(AVANT_SUJET);
       return {
-        prompt: `Attention au piège ! Écris la sorte du sujet : « ${phraseS(s, pre)} »`,
-        answer: { kind: 'text', accepted: ACCEPTED_TYPE[s.type] },
-        traps: TYPES.filter((t) => t !== s.type).map((t) => textTrap(at(ACCEPTED_TYPE[t], 0), whyType(s, t))),
+        prompt: `Attention au piège ! Choisis la sorte du sujet : « ${phraseS(s, pre)} »`,
+        ...choixType(s),
         hint: 'Supprime le groupe qui dit quand. Regarde les noms du sujet.',
-        steps: stepsType(s, 'Écris', pre),
+        steps: stepsType(s, pre),
       };
     }
     default: {
@@ -756,6 +750,8 @@ function nomVerbeDraft(rng: Rng, level: Level): QuestionDraft {
       const sujet = at(ws, 0);
       const autres = ws.filter((w) => !same(w, verb) && !same(w, e.mot));
       const last = at(autres, autres.length - 1);
+      // Vrai pour tout mot qui n'est pas le verbe, y compris un adjectif (il s'accorde, lui, avec le sujet).
+      const whyLast = `« ${last} » ne change pas si tu ajoutes « hier » : ce n’est pas le verbe.`;
       return {
         prompt: `Écris le verbe conjugué de cette phrase : « ${text} »`,
         answer: { kind: 'text', accepted: ecritures(verb) },
@@ -765,14 +761,14 @@ function nomVerbeDraft(rng: Rng, level: Level): QuestionDraft {
                 sujet,
                 `« ${sujet} » est le pronom sujet : il dit qui fait l’action, mais ce n’est pas le verbe.`,
               ),
-              textTrap(last, `« ${last} » est un autre mot de la phrase : ce n’est pas lui qui change avec le sujet.`),
+              textTrap(last, whyLast),
             ]
           : [
               textTrap(
                 e.mot,
                 `Ici, « ${e.mot} » est un nom : on peut dire « ${nSg(e)} », « ${nPl(e)} ». Ce n’est pas le verbe.`,
               ),
-              textTrap(last, `« ${last} » est un autre mot de la phrase : ce n’est pas lui qui change avec le sujet.`),
+              textTrap(last, whyLast),
             ],
         hint: 'Ajoute « hier » devant : un seul mot change.',
         steps: stepsTrouver(e, isVerb, 'Écris'),

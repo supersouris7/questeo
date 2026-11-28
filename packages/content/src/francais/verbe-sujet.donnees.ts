@@ -248,9 +248,9 @@ export const SUJETS: readonly Sujet[] = [
   { s: 'Un gros nuage gris', reste: 'cache le soleil', type: 'gn' },
   { s: 'Mes deux cousins', reste: 'habitent près de la mer', type: 'gn' },
   { s: 'Mon père et ma mère', reste: 'préparent le repas', type: 'noms' },
-  { s: 'Le chat et le chien', reste: 'dorment ensemble', type: 'noms' },
+  { s: 'Le chat et le chien', reste: 'dorment sur le tapis', type: 'noms' },
   { s: 'Ma sœur et mon frère', reste: 'jouent au ballon', type: 'noms' },
-  { s: 'Le boulanger et le fleuriste', reste: 'ouvrent leur magasin', type: 'noms' },
+  { s: 'Le boulanger et le fleuriste', reste: 'ouvrent la porte', type: 'noms' },
   { s: 'Mes cousins et mes cousines', reste: 'arrivent à la maison', type: 'noms' },
   { s: 'Les filles, les garçons et la maîtresse', reste: 'partent en sortie', type: 'noms' },
 ];
