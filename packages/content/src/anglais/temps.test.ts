@@ -315,4 +315,72 @@ describe('anglais cm1 : le temps qui passe', () => {
     expect(asked.size).toBe(6);
     expect(lineOfAnswer.size).toBe(3);
   });
+
+  it('saisons : point final accepté aux niveaux 3 à 5, erreur expliquée avec ou sans point', () => {
+    for (const level of [3, 4, 5] as const)
+      for (let seed = 1; seed <= 100; seed++) {
+        const q = generate('acm1-saisons', level, seed);
+        if (q.answer.kind !== 'text') continue;
+        expect(right('acm1-saisons', level, seed, `${q.answer.accepted[0] ?? ''}.`)).toBe(true);
+        for (const t of q.traps)
+          if ('text' in t) expect(check(q, { kind: 'text', text: `${t.text.replace(/\.$/, '')}.` }).why).toBe(t.why);
+      }
+  });
+
+  it('saisons : 4 saisons à ranger depuis « spring », et au moins 6 questions au niveau 1', () => {
+    const first = new Set<string>();
+    let ordered = 0;
+    for (let seed = 1; seed <= 200; seed++) {
+      const one = generate('acm1-saisons', 1, seed);
+      first.add(one.prompt);
+      const q = generate('acm1-saisons', 3, seed);
+      if (q.answer.kind !== 'order') continue;
+      ordered++;
+      expect(q.answer.items).toHaveLength(4);
+      expect(q.hint).toContain('« spring »');
+    }
+    expect(ordered).toBeGreaterThan(0);
+    expect(first.size).toBeGreaterThanOrEqual(6);
+  });
+
+  it('date : « the 30th July » accepté, avec « on » et le jour', () => {
+    let tried = 0;
+    for (const level of [3, 4, 5] as const)
+      for (let seed = 1; seed <= 100; seed++) {
+        const q = generate('acm1-date', level, seed);
+        if (q.answer.kind !== 'text') continue;
+        const form = q.answer.accepted.find((a) => /^(on )?([A-Z][a-z]+day )?the \d+(st|nd|rd|th) [A-Z]/.test(a));
+        expect(form, q.prompt).toBeDefined();
+        const bare = (form ?? '').replace(/^on /, '');
+        expect(right('acm1-date', level, seed, `on ${bare}`), bare).toBe(true);
+        tried++;
+      }
+    expect(tried).toBeGreaterThan(0);
+  });
+
+  it('météo, niveaux 4 et 5 : « today » et la ville en tête ou en fin, « ! » accepté', () => {
+    for (let seed = 1; seed <= 100; seed++) {
+      const four = generate('acm1-meteo', 4, seed);
+      if (four.answer.kind !== 'text') throw new Error('saisie attendue');
+      const w = (four.answer.accepted[0] ?? '').split(' ')[1] ?? '';
+      for (const text of [`Today it's ${w}`, `Today, it's ${w}.`, `It's ${w}!`, `It's ${w} !`])
+        expect(right('acm1-meteo', 4, seed, text), text).toBe(true);
+      expect(right('acm1-meteo', 4, seed, `Today it's ${w} today`)).toBe(false);
+
+      const five = generate('acm1-meteo', 5, seed);
+      if (five.figure?.kind !== 'document' || five.answer.kind !== 'text') throw new Error('document attendu');
+      const other = (five.answer.accepted[0] ?? '').split(' ')[1] ?? '';
+      const line = five.figure.lines.find((l) => l.includes(` ${other}`)) ?? '';
+      const town = /^In (\w+),/.exec(line)?.[1] ?? '';
+      for (const text of [
+        `It's ${other} in ${town}`,
+        `In ${town} it's ${other}`,
+        `In ${town}, it is ${other}!`,
+        `Today it's ${other}`,
+        `Today in ${town}, it's ${other}.`,
+        `It's ${other} in ${town} today`,
+      ])
+        expect(right('acm1-meteo', 5, seed, text), text).toBe(true);
+    }
+  });
 });

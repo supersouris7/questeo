@@ -105,6 +105,12 @@ const REPRISES = [
   'hcm1-heritages',
   'hcm1-mouvements',
   'hcm1-clovis-charlemagne',
+  'acm1-couleurs',
+  'acm1-jours',
+  'acm1-mois',
+  'acm1-saisons',
+  'acm1-date',
+  'acm1-meteo',
 ];
 
 describe('détecteur : catalogue', () => {
