@@ -20,6 +20,7 @@ import {
   faitVocabulaire6e,
 } from './vocabulaire-6e.donnees.ts';
 import { F6_VOCABULAIRE } from './vocabulaire-6e.ts';
+import { initiale } from './vocabulaire.ts';
 
 const skills = F6_VOCABULAIRE;
 const LEVELS: readonly Level[] = [1, 2, 3, 4, 5];
@@ -218,11 +219,53 @@ describe('correction des réponses', () => {
     expect(check(q, saisie('habileté')).why).toContain('nom');
   });
 
-  it('sens figuré N4 : moins d’aide qu’au niveau 3, ni sens propre donné, ni nombre de lettres', () => {
+  it('sens figuré N4 : initiale et nombre de lettres comme au niveau 3, sans le sens propre', () => {
     for (const q of tirages('f6-sens-propre-figure', 4)) {
-      expect(q.prompt).toMatch(/^Écris le mot qui complète les deux phrases\. Il commence par « \p{L} »\.$/u);
+      if (q.answer.kind !== 'text') throw new Error('forme inattendue');
+      const mot = q.answer.accepted[0] ?? '';
+      expect(q.prompt).toBe(`Écris le mot qui complète la phrase courte et la phrase longue. ${initiale(mot)}`);
       for (const f of FIGURES) expect([q.hint, ...q.steps].join(' '), q.prompt).not.toContain(f.sensPropre);
     }
+  });
+
+  it('sens figuré N4 : seule la phrase figurée change par rapport au niveau 3', () => {
+    for (const f of FIGURES) {
+      const [n3, n4] = ([3, 4] as const).map((n) => {
+        const phrase = (n === 3 ? f.figure : f.contexte).replace('{}', '…');
+        const q = tirages('f6-sens-propre-figure', n).find(
+          (x) => x.figure?.kind === 'document' && x.figure.lines[1] === phrase,
+        );
+        if (!q) throw new Error(`aucune question N${n} sur « ${f.mot} »`);
+        return q;
+      });
+      for (const q of [n3, n4]) expect(q?.prompt, f.mot).toContain(initiale(f.forme));
+      expect(n4?.figure?.kind === 'document' && n4.figure.lines[0]).toBe(
+        n3?.figure?.kind === 'document' && n3.figure.lines[0],
+      );
+      expect(f.contexte.length, f.mot).toBeGreaterThan(f.propre.length);
+      expect(f.contexte.length, f.mot).toBeGreaterThan(f.figure.length);
+    }
+  });
+
+  it('sens figuré N4 : « grandit » et « averse » n’ont pas le nombre de lettres demandé', () => {
+    for (const [phrase, juste, rival] of [
+      ['Le blé', 'germe', 'grandit'],
+      ['a coupé la route', 'avalanche', 'averse'],
+    ] as const) {
+      const q = tirages('f6-sens-propre-figure', 4).find(
+        (x) => x.figure?.kind === 'document' && x.figure.lines[0]?.includes(phrase),
+      );
+      if (!q) throw new Error(`aucune question sur « ${juste} »`);
+      expect(q.prompt).toContain(`compte ${juste.length} lettres`);
+      expect(rival).not.toHaveLength(juste.length);
+      expect(check(q, saisie(juste)).correct).toBe(true);
+      expect(check(q, saisie(rival)).correct).toBe(false);
+    }
+  });
+
+  it('mots des disciplines : l’outil récapitulatif est rattaché au cycle 3, pas à la sixième', () => {
+    const textes = skills.find((s) => s.id === 'f6-mots-disciplines')?.sens?.map((s) => s.text) ?? [];
+    expect(textes.join(' ')).toMatch(/^Au cycle 3, ton outil récapitulatif/);
   });
 
   it('sens figuré N4 : le mot à écrire n’est montré ni dans l’énoncé, ni dans les phrases, ni dans l’indice', () => {

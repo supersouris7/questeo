@@ -492,17 +492,14 @@ function memeMotDeuxPhrases(f: Figure): QuestionDraft {
   };
 }
 
-/** « éteint » est écarté : sans le nombre de lettres, « étouffe » compléterait aussi les deux phrases. */
-const FIGURES_SANS_LONGUEUR = FIGURES.filter((f) => f.mot !== 'éteindre');
-
-/** Comme au niveau 3, avec une phrase figurée plus longue et la première lettre pour seule aide. */
+/** Comme au niveau 3 (initiale et nombre de lettres), avec une phrase figurée plus longue. */
 function completerImage(f: Figure): QuestionDraft {
   const pieges: (readonly [string, string])[] = estVerbe(f)
     ? [[f.mot, 'Tu as écrit l’infinitif. La phrase demande le verbe conjugué.']]
     : [];
   return {
     ...ecrire([f.forme], pieges, {
-      prompt: `Écris le mot qui complète les deux phrases. Il commence par « ${f.forme.charAt(0)} ».`,
+      prompt: `Écris le mot qui complète la phrase courte et la phrase longue. ${initiale(f.forme)}`,
       hint: 'Une phrase est au sens propre, l’autre au sens figuré.',
       steps: [DEF_FIGURE, 'Essaie ton mot dans les deux phrases.', `Écris le mot : **${f.forme}**.`],
     }),
@@ -519,7 +516,7 @@ function figureDraft(rng: Rng, level: Level): QuestionDraft {
     case 3:
       return memeMotDeuxPhrases(rng.pick(FIGURES));
     case 4:
-      return completerImage(rng.pick(FIGURES_SANS_LONGUEUR));
+      return completerImage(rng.pick(FIGURES));
     default:
       return lignesAEcrire(
         {
@@ -945,7 +942,7 @@ export const F6_VOCABULAIRE: readonly Skill[] = [
     sens: [
       sens(
         'usage',
-        'En sixième, ton outil récapitulatif donne une place essentielle au vocabulaire des matières.',
+        'Au cycle 3, ton outil récapitulatif donne une place essentielle au vocabulaire des matières.',
         'v6-prog-outil',
       ),
     ],
