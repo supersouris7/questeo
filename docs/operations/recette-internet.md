@@ -77,8 +77,9 @@ L'application croit l'en-tête `Remote-Email` ; avant d'activer le réglage, vé
 
 - le proxy contrôle l'accès à **toutes** les routes et recopie `Remote-Email` depuis la réponse du portail
   (`copy_headers Remote-User Remote-Groups Remote-Email Remote-Name`), ce qui écrase la valeur envoyée par
-  le client ; retirer en plus ces en-têtes à l'entrée (`request_header -Remote-*`, avant `forward_auth`)
-  protège des versions du proxy qui garderaient un en-tête absent de la réponse du portail ;
+  le client (un en-tête listé mais absent de la réponse du portail est retiré de la requête). Ne pas ajouter
+  `request_header -Remote-*` : Caddy l'exécute **après** `forward_auth`, quel que soit l'ordre d'écriture, ce qui
+  effacerait l'identité et casserait la connexion par le portail ;
 - le port de l'application n'écoute que sur la machine (`compose.override.yml`) : le fichier `compose.yml`
   du dépôt, seul, le publie sur toutes les interfaces ;
 - aucun autre site du proxy ne transmet `/api/v1/auth/portail` à l'application avec le secret.
