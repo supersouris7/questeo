@@ -149,4 +149,8 @@ export const RELECTURES: readonly Relecture[] = [
   { skillId: 'f6-participe-etre', version: 1, lot: 'fr-6e-05', date: '2026-11-26', verdict: 'ok' },
   { skillId: 'f6-participe-avoir-cod', version: 1, lot: 'fr-6e-05', date: '2026-11-26', verdict: 'ok' },
   { skillId: 'fcm1-types-phrases', version: 2, lot: 'rp-fr-cm1-01', date: '2026-11-28', verdict: 'ok' },
+  { skillId: 'fcm1-poser-question', version: 2, lot: 'rp-fr-cm1-01', date: '2026-11-28', verdict: 'ok' },
+  { skillId: 'fcm1-forme-negative', version: 2, lot: 'rp-fr-cm1-01', date: '2026-11-28', verdict: 'ok' },
+  { skillId: 'fcm1-forme-exclamative', version: 2, lot: 'rp-fr-cm1-01', date: '2026-11-28', verdict: 'ok' },
+  { skillId: 'fcm1-ponctuation-fin', version: 2, lot: 'rp-fr-cm1-01', date: '2026-11-28', verdict: 'ok' },
 ];
