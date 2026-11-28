@@ -134,4 +134,9 @@ export const RELECTURES: readonly Relecture[] = [
   { skillId: 'a5-voc-nature', version: 1, lot: 'an-5e-07', date: '2026-11-27', verdict: 'ok' },
   { skillId: 'a5-personnages-celebres', version: 1, lot: 'an-5e-07', date: '2026-11-27', verdict: 'ok' },
   { skillId: 'a5-reperes-axes', version: 1, lot: 'an-5e-07', date: '2026-11-27', verdict: 'ok' },
+  { skillId: 'acm1-famille', version: 2, lot: 'rp-an-cm1-04', date: '2026-11-28', verdict: 'ok' },
+  { skillId: 'acm1-have-got', version: 2, lot: 'rp-an-cm1-04', date: '2026-11-28', verdict: 'ok' },
+  { skillId: 'acm1-corps', version: 2, lot: 'rp-an-cm1-04', date: '2026-11-28', verdict: 'ok' },
+  { skillId: 'acm1-vetements', version: 2, lot: 'rp-an-cm1-04', date: '2026-11-28', verdict: 'ok' },
+  { skillId: 'acm1-genitif', version: 2, lot: 'rp-an-cm1-04', date: '2026-11-28', verdict: 'ok' },
 ];

@@ -2,16 +2,21 @@ import type { Chapter, QuestionDraft, Skill } from '../types.ts';
 import type { Rng } from '../rng.ts';
 import { choice } from '../build.ts';
 import { BODY, CLOTHES, FAMILY, PLURALS } from './famille-faits.ts';
+import { dottedTraps } from './outils-5e.ts';
 import { COLOURS, type Word } from './temps-faits.ts';
 import { at, others, pairs, pickEnglish, shuffledOther, some, understand, write } from './temps.ts';
 
 /**
- * Anglais CM1 — « Famille, corps, vêtements » (lot an-cm1-04, docs/adr/0034). Programme : cycle 3, langues
- * vivantes (la famille ; le corps humain, les vêtements ; les possessifs et le génitif). Mots et règles :
- * British Council (voir famille-faits.ts : chaque fait y porte sa source et sa citation).
+ * Anglais CM1 — « Famille, corps, vêtements » (lot an-cm1-04, repassé : docs/adr/0034). Programme de langues
+ * vivantes du cours moyen (arrêté du 26 février 2026) : il nomme la famille, mais ni « have got », ni le corps,
+ * ni les vêtements, ni le génitif. Mots et règles : British Council (voir famille-faits.ts : chaque fait y porte
+ * sa source et sa citation).
  */
-const PROGRAMME = 'Programme du cycle 3 (BOEN n° 31 du 30 juillet 2020, version 2023), langues vivantes, CM1';
-const source = (detail: string) => `${PROGRAMME} — famille, corps humain, vêtements ; possessifs et génitif. ${detail}`;
+const PROGRAMME = 'Programme de langues vivantes, cours moyen (arrêté du 26 février 2026, BO n° 12), CM1';
+const source = (objective: string, detail: string) => `${PROGRAMME} — « ${objective} ». ${detail}`;
+const WORDS_GOAL = 'Repérer des mots simples et familiers';
+const DESCRIBE_GOAL = 'Décrire brièvement des personnes, des objets ou des animaux familiers';
+const GRAMMAR_GOAL = 'Reconnaitre quelques structures et formes grammaticales simples';
 
 /** « de » élidé devant un prénom qui commence par une voyelle. */
 const de = (name: string) => (/^[AEIOU]/.test(name) ? `d’${name}` : `de ${name}`);
@@ -21,12 +26,76 @@ const word = (list: readonly Word[], en: string): Word => {
   return w;
 };
 const full = (forms: readonly string[]) => forms.flatMap((f) => [f, `${f}.`]);
+/** Mots écrits : un tiret ou une espace ne comptent pas comme des lettres. */
+const letters = (en: string) => en.replace(/[^a-z]/gi, '').length;
+
+/**
+ * Explications guidées et indice des questions de vocabulaire communes (temps.ts) : `think` dit comment
+ * retrouver le mot.
+ */
+function guided(q: QuestionDraft, list: readonly Word[], think: string): QuestionDraft {
+  const a = q.answer;
+  if (a.kind === 'match') {
+    const solved = a.left.map((l, i) => `${l} = ${at(a.right, at(a.pairs, i))}`).join(' ; ');
+    return {
+      ...q,
+      steps: [
+        'Commence par le mot anglais que tu connais le mieux.',
+        'Relie ensuite les autres mots, un par un.',
+        `Vérifie tes paires : **${solved}**.`,
+      ],
+    };
+  }
+  if (a.kind === 'choice') {
+    const good = at(a.options, a.correct);
+    const w = list.find((x) => x.en === good);
+    if (w) return { ...q, steps: [`Lis le mot français : « ${w.fr} ».`, think, `Choisis **${w.en}**.`] };
+    const known = list.find((x) => x.fr === good);
+    if (!known) throw new Error(`mot inconnu : ${good}`);
+    return {
+      ...q,
+      steps: [
+        `Lis le mot anglais : « ${known.en} ».`,
+        'Repère le mot français de la liste qui correspond.',
+        `Choisis **${known.fr}**.`,
+      ],
+    };
+  }
+  if (a.kind !== 'text') return q;
+  const w = word(list, at(a.accepted, 0));
+  const first = w.en.slice(0, 1);
+  return {
+    ...q,
+    hint: `Le mot commence par « ${first} » et compte ${letters(w.en)} lettres.`,
+    steps: [
+      `Lis le mot français : « ${w.fr} ».`,
+      think,
+      `Vérifie la première lettre : « ${first} ».`,
+      `Écris **${w.en}**.`,
+    ],
+  };
+}
 
 // ——— 1. La famille ———
+
+const THINK_FAMILY = 'Pense à cette personne dans un arbre de famille.';
 
 /** « mère » et « maman » ne sont jamais proposés ensemble : l’élève ne saurait pas les départager. */
 const FORMAL = FAMILY.filter((w) => w.en !== 'mum' && w.en !== 'dad');
 const FAMILIAR = FAMILY.filter((w) => w.en !== 'mother' && w.en !== 'father');
+/** Saisie : les petits noms, et « my », « the » ou « a » devant le mot, sont aussi justes. */
+function familyForms(w: Word): string[] {
+  const familiar = w.en === 'mother' ? ['mummy', 'mommy'] : w.en === 'father' ? ['daddy'] : [];
+  return [w.en, ...(w.alt ?? []), ...familiar].flatMap((f) => {
+    const one = w.en === 'parents' ? [] : [`${/^[aeiou]/.test(f) ? 'an' : 'a'} ${f}`];
+    return [f, `my ${f}`, `the ${f}`, ...one];
+  });
+}
+/** « parents » et « cousin » s’écrivent comme en français : l’énoncé donnerait la réponse. */
+const FAMILY_WRITE: readonly Word[] = FORMAL.filter((w) => w.en !== 'parents' && w.en !== 'cousin').map((w) => ({
+  ...w,
+  alt: familyForms(w).slice(1),
+}));
 const FEMALE = ['Ana', 'Yuna', 'Lisa'];
 const MALE = ['Emir', 'Paul', 'Tom'];
 
@@ -87,33 +156,47 @@ const family: Skill = {
   id: 'acm1-famille',
   title: 'La famille',
   levels: 5,
-  version: 1,
+  version: 2,
   lesson: {
     memo: [
-      'La famille : mother (mum) = mère, father (dad) = père, sister = sœur, brother = frère, baby = bébé.',
+      'La famille : mother = mère ; mum = maman ; father = père ; dad = papa ; sister = sœur ; brother = frère ; baby = bébé.',
       'Les grands-parents sont les **parents** de tes parents : grandmother (grandma) et grandfather (grandad).',
       'Aussi : uncle (oncle), auntie (tante), cousin (cousin ou cousine), son (fils).',
     ],
-    source: source('Mots : British Council, « Family flashcards » et chanson « What is a family? ».'),
-    sources: ['cycle3-2020', 'bck-flashcards-family', 'bck-song-family', 'bc-possessive-s'],
+    source: source(WORDS_GOAL, 'Mots : British Council, « Family flashcards » et chanson « What is a family? ».'),
+    sources: ['lve-cm-2026', 'bck-flashcards-family', 'bck-song-family', 'bc-possessive-s'],
   },
+  sens: [
+    {
+      type: 'usage',
+      text: 'Dans un échange entre élèves, tu peux montrer des photos de ta famille.',
+      source: 'lve-c2-2026',
+      citation:
+        'Lors d’un échange avec leurs partenaires de projet eTwinning, les élèves montrent des photos de leur famille',
+    },
+  ],
   generate: (rng, level): QuestionDraft => {
     if (level === 1)
-      return pickEnglish(
-        rng,
-        FAMILY.slice(0, 7),
-        'la famille',
-        'Imagine cette personne dans une famille. Quel mot as-tu entendu en classe ?',
+      return guided(
+        pickEnglish(
+          rng,
+          FAMILY.slice(0, 7),
+          'la famille',
+          'Imagine cette personne dans une famille. Quel mot as-tu entendu en classe ?',
+        ),
+        FAMILY,
+        THINK_FAMILY,
       );
-    if (level === 2) return understand(rng, rng.int(0, 1) === 0 ? FORMAL : FAMILIAR, 'la famille');
-    if (level === 3) return write(rng, FORMAL, 'la famille');
+    if (level === 2)
+      return guided(understand(rng, rng.int(0, 1) === 0 ? FORMAL : FAMILIAR, 'la famille'), FAMILY, THINK_FAMILY);
+    if (level === 3) return guided(write(rng, FAMILY_WRITE, 'la famille'), FAMILY_WRITE, THINK_FAMILY);
     if (level === 4) {
-      if (rng.int(0, 1) === 0) return pairs(rng, FORMAL, 5);
+      if (rng.int(0, 1) === 0) return guided(pairs(rng, FORMAL, 5), FORMAL, THINK_FAMILY);
       const link = rng.pick(LINKS);
       const good = word(FAMILY, link.good);
       return {
         prompt: `Qui est ${link.fr} pour toi ? Écris le mot anglais.`,
-        answer: { kind: 'text', accepted: [good.en, ...(good.alt ?? [])] },
+        answer: { kind: 'text', accepted: familyForms(good) },
         traps: [
           ...link.bad.map((b) => ({
             text: b,
@@ -123,9 +206,9 @@ const family: Skill = {
         ],
         hint: 'Dessine un petit arbre : toi, puis tes parents, puis la personne cherchée.',
         steps: [
-          `On suit le lien : ${link.fr}.`,
-          `Le mot français pour cette personne est « ${good.fr} ».`,
-          `Réponse : **${good.en}**`,
+          `Suis le lien pas à pas : ${link.fr}.`,
+          `Trouve le nom français de cette personne : « ${good.fr} ».`,
+          `Écris le mot anglais : **${good.en}**`,
         ],
       };
     }
@@ -143,7 +226,7 @@ const family: Skill = {
         lines: [`Hello! I’m ${me}.`, `${mid} is my ${first}.`, `${who} is ${mid}’s ${second}.`],
         credit: 'Écrit pour l’exercice.',
       },
-      answer: { kind: 'text', accepted: [good.en, ...(good.alt ?? [])] },
+      answer: { kind: 'text', accepted: familyForms(good) },
       traps: [
         ...[first, second, ...link.bad]
           .filter((b, i, all) => b !== good.en && all.indexOf(b) === i)
@@ -152,9 +235,10 @@ const family: Skill = {
       ],
       hint: `« ${mid}’s » veut dire « ${de(mid)} ». Trouve d’abord qui est ${mid}.`,
       steps: [
-        `${mid} est le « ${first} » ${de(me)}. ${who} est le « ${second} » ${de(mid)}.`,
-        `${who} est ${link.role} ${de(mid)} : pour ${me}, le mot français est « ${good.fr} ».`,
-        `Réponse : **${good.en}**`,
+        `Lis la ligne 2 : « ${mid} is my ${first}. »`,
+        `Lis la ligne 3 : « ${who} is ${mid}’s ${second}. »`,
+        `Cherche qui est ${link.role} ${de(mid)} pour ${me} : « ${good.fr} ».`,
+        `Écris le mot anglais : **${good.en}**`,
       ],
     };
   },
@@ -183,6 +267,13 @@ const SHORT: Readonly<Record<string, string>> = {
   She: 'She’s',
 };
 const wrongHave = (has: 'have' | 'has') => (has === 'have' ? 'has' : 'have');
+/** Bulle qui relie le sujet à la bonne forme. */
+const ruleHave = (s: { en: string; has: 'have' | 'has' }) => {
+  if (s.has === 'have') return 'Retiens : « I, you, we, they » vont avec « have ».';
+  if (s.en === 'He' || s.en === 'She') return 'Retiens : « he » et « she » vont avec « has ».';
+  return `Remplace « ${s.en} » par « ${s.en === 'My sister' ? 'she' : 'he'} » : prends « has ».`;
+};
+const spot = (s: { en: string }) => `Repère de qui on parle : « ${s.en} ».`;
 const whyHave = (s: { en: string; has: string }) =>
   s.has === 'has'
     ? `Avec « ${s.en} » (il ou elle), on dit « has got ».`
@@ -192,20 +283,16 @@ function haveGotWrite(rng: Rng): QuestionDraft {
   const s = rng.pick(SUBJECTS);
   const o = rng.pick(OWNED);
   return {
-    prompt: `Complète avec « have » ou « has » : « ${s.en} … got ${o}. »`,
-    answer: { kind: 'text', accepted: [s.has] },
+    prompt: `Écris le mot qui manque pour dire « avoir » : « ${s.en} … got ${o}. »`,
+    // La forme courte collée au sujet est juste aussi.
+    answer: { kind: 'text', accepted: [s.has, s.has === 'has' ? '’s' : '’ve'] },
     traps: [
       { text: wrongHave(s.has), why: whyHave(s) },
       { text: 'is', why: '« is » est le verbe « être ». Pour « avoir », on utilise have ou has.' },
       { text: 'got', why: 'Le mot « got » est déjà écrit. Il manque le petit mot devant.' },
     ],
     hint: 'Regarde le sujet. Peux-tu le remplacer par « he » ou « she » ?',
-    steps: [
-      s.has === 'has'
-        ? `« ${s.en} » = une seule personne (he ou she).`
-        : `I, you, we, they vont avec « have ». Donc avec « ${s.en} », on prend « have ».`,
-      `Réponse : **${s.has}**`,
-    ],
+    steps: [spot(s), ruleHave(s), `Écris dans le trou : **${s.has}**`],
   };
 }
 
@@ -217,16 +304,23 @@ function haveGotShort(rng: Rng): QuestionDraft {
   return {
     prompt: `Écris avec la forme courte : « ${s.en} ${s.has} got ${o}. »`,
     answer: { kind: 'text', accepted: full([good]) },
-    traps: [
+    traps: dottedTraps([
       {
-        text: `${short.replace('’', '')} got ${o}.`,
+        text: `${short.replace('’', '')} got ${o}`,
         why: 'Il manque l’apostrophe : elle remplace les lettres enlevées.',
       },
-      { text: `${s.en} got ${o}.`, why: `Il manque « ${s.has} » sous sa forme courte.` },
-      { text: `${s.en}${s.has === 'has' ? '’ve' : '’s'} got ${o}.`, why: whyHave(s) },
-    ],
+      {
+        text: `${s.en} got ${o}`,
+        why: `Sans « ${s.has} », la phrase parle du passé. Ajoute sa forme courte.`,
+      },
+      { text: `${s.en}${s.has === 'has' ? '’ve' : '’s'} got ${o}`, why: whyHave(s) },
+    ]),
     hint: 'Colle le sujet et le petit verbe. Une apostrophe prend la place des lettres enlevées.',
-    steps: [`« ${s.en} ${s.has} » devient « ${short} ».`, `Réponse : **${good}.**`],
+    steps: [
+      `Repère les deux mots à raccourcir : « ${s.en} ${s.has} ».`,
+      'Enlève « ha » et mets une apostrophe ’ à la place.',
+      `Écris la phrase : **${good}.**`,
+    ],
   };
 }
 
@@ -236,22 +330,26 @@ function haveGotNegative(rng: Rng): QuestionDraft {
   const neg = s.has === 'has' ? 'hasn’t' : 'haven’t';
   const good = `${s.en} ${neg} got ${o}`;
   return {
-    prompt: `Écris à la forme négative : « ${s.en} ${s.has} got ${o}. »`,
+    prompt: `Écris la phrase avec « not », en gardant « got » : « ${s.en} ${s.has} got ${o}. »`,
     answer: {
       kind: 'text',
       accepted: full([
         good,
         `${s.en} ${s.has} not got ${o}`,
-        ...(SHORT[s.en] ? [`${SHORT[s.en] ?? ''} not got ${o}`] : []),
+        `${SHORT[s.en] ?? `${s.en}${s.has === 'has' ? '’s' : '’ve'}`} not got ${o}`,
       ]),
     },
-    traps: [
-      { text: `${s.en} ${s.has === 'has' ? 'haven’t' : 'hasn’t'} got ${o}.`, why: whyHave(s) },
-      { text: `${s.en} don’t got ${o}.`, why: 'Avec « have got », on ajoute « not » après have ou has.' },
-      { text: `${s.en} ${s.has} got not ${o}.`, why: '« not » se place juste après have ou has.' },
-    ],
+    traps: dottedTraps([
+      { text: `${s.en} ${s.has === 'has' ? 'haven’t' : 'hasn’t'} got ${o}`, why: whyHave(s) },
+      { text: `${s.en} don’t got ${o}`, why: 'Avec « have got », on ajoute « not » après have ou has.' },
+      { text: `${s.en} ${s.has} got not ${o}`, why: '« not » se place juste après have ou has.' },
+    ]),
     hint: 'Ajoute « not » juste après le premier petit verbe.',
-    steps: [`On place « not » après « ${s.has} » : ${neg}.`, `Réponse : **${good}.**`],
+    steps: [
+      `Repère le verbe placé après le sujet : « ${s.has} ».`,
+      `Ajoute « not » juste après, puis raccourcis : « ${s.has} not » → « ${neg} ».`,
+      `Écris la phrase : **${good}.**`,
+    ],
   };
 }
 
@@ -271,7 +369,11 @@ function haveGotOrder(rng: Rng): QuestionDraft {
     }`,
     answer: { kind: 'order', items, correct: right.map((x) => items.indexOf(x)) },
     hint: 'Dans une question, le petit verbe passe devant la personne.',
-    steps: [`Pour une question, « ${aux} » vient avant « ${subject} ».`, `Réponse : **${right.join(' ')} ?**`],
+    steps: [
+      `Commence la question par le verbe : « ${aux} ».`,
+      `Place ensuite la personne, « ${subject} », puis « got ».`,
+      `Range ainsi : **${right.join(' ')} ?**`,
+    ],
   };
 }
 
@@ -279,16 +381,24 @@ const haveGot: Skill = {
   id: 'acm1-have-got',
   title: 'Have got : avoir',
   levels: 5,
-  version: 1,
+  version: 2,
   lesson: {
     memo: [
-      '**Have got** veut dire « avoir » : pour tes objets, ta famille ou ton corps. I have got a sister.',
-      'I, you, we, they + **have** got. He, she, it + **has** got. Forme courte : I’ve got, she’s got.',
-      'Non : I haven’t got, she hasn’t got. Question : Have you got…? Has she got…? Réponse : Yes, I have. / No, she hasn’t.',
+      '**Have got** veut dire « avoir » : I have got a sister.',
+      'Avec he, she, it : **has** got ; avec I, you, we, they : **have** got ; forme courte : I’ve got, he’s got.',
+      'Pour dire non, ajoute « not » ; pour demander, mets « Have » ou « Has » devant, puis réponds avec ce verbe.',
     ],
-    source: source('Formes : British Council, LearnEnglish Kids, « Have got ».'),
-    sources: ['cycle3-2020', 'bck-have-got'],
+    source: source(GRAMMAR_GOAL, 'Formes : British Council, LearnEnglish Kids, « Have got ».'),
+    sources: ['lve-cm-2026', 'bck-have-got'],
   },
+  sens: [
+    {
+      type: 'usage',
+      text: 'Avec « have got », tu peux parler de tes objets, de ta famille et de ton corps.',
+      source: 'bck-have-got',
+      citation: 'We can use have got to talk about our things, family members and parts of the body.',
+    },
+  ],
   generate: (rng, level): QuestionDraft => {
     if (level === 1 || level === 2) {
       const s = rng.pick(level === 1 ? SUBJECTS.slice(0, 6) : SUBJECTS);
@@ -303,13 +413,13 @@ const haveGot: Skill = {
           answer,
           traps,
           hint: 'Peux-tu remplacer le sujet par « he » ou « she » ? Ta réponse en dépend.',
-          steps: [whyHave(s), `Réponse : **${s.has}**`],
+          steps: [spot(s), ruleHave(s), `Choisis le mot : **${s.has}**`],
         };
       }
       const good = `${s.has} got`;
       const { answer, traps } = choice(rng, good, [
         { label: `${wrongHave(s.has)} got`, why: whyHave(s) },
-        { label: 'is got', why: '« is » est le verbe « être ». On ne dit jamais « is got ».' },
+        { label: 'is got', why: '« is » est le verbe « être ». Pour « avoir », on dit have got ou has got.' },
         { label: `${s.has} get`, why: `Après « ${s.has} », on écrit « got », jamais « get ».` },
       ]);
       return {
@@ -317,7 +427,7 @@ const haveGot: Skill = {
         answer,
         traps,
         hint: 'Il faut deux mots. Le premier dépend du sujet.',
-        steps: [whyHave(s), `Réponse : **${good}**`],
+        steps: [spot(s), ruleHave(s), `Ajoute « got » après ce verbe : **${good}**`],
       };
     }
     if (level === 3) return haveGotWrite(rng);
@@ -336,7 +446,13 @@ const haveGot: Skill = {
     const yes = rng.int(0, 1) === 0;
     const asked = yes ? has : hasNot;
     const good = yes ? `Yes, ${he} has` : `No, ${he} hasn’t`;
-    const forms = yes ? [good, `Yes ${he} has`] : [good, `No ${he} hasn’t`, `No, ${he} has not`, `No ${he} has not`];
+    // Le prénom à la place du pronom reste une réponse juste.
+    const forms = [he, kid].flatMap((who) =>
+      (yes
+        ? [`${who} has`, `${who} has got`]
+        : [`${who} hasn’t`, `${who} has not`, `${who} hasn’t got`, `${who} has not got`]
+      ).flatMap((end) => (yes ? [`Yes, ${end}`, `Yes ${end}`] : [`No, ${end}`, `No ${end}`])),
+    );
     const other = he === 'he' ? 'she' : 'he';
     const pronoun = he === 'he' ? 'He' : 'She';
     return {
@@ -362,9 +478,12 @@ const haveGot: Skill = {
       ],
       hint: 'Cherche la phrase qui parle de cet objet. Répète le verbe de la question dans ta réponse.',
       steps: [
-        `On cherche « ${asked} » : « ${pronoun} ${yes ? 'has' : 'hasn’t'} got a ${asked}. »`,
-        `La question commence par « Has » : on répond avec « ${yes ? 'has' : 'hasn’t'} ».`,
-        `Réponse : **${good}.**`,
+        `Cherche la ligne qui parle de « ${asked} ».`,
+        yes
+          ? 'Regarde son verbe : « has » veut dire « a ». La réponse est oui.'
+          : 'Regarde son verbe : « hasn’t » veut dire « n’a pas ». La réponse est non.',
+        `Commence par « ${yes ? 'Yes' : 'No'} », puis ajoute « ${he} » et ce verbe.`,
+        `Écris : **${good}.**`,
       ],
     };
   },
@@ -379,34 +498,52 @@ const withArticle = (w: Word): Word => {
   return { ...w, alt: [...(w.alt ?? []), `the ${w.en}`, ...one] };
 };
 
+const THINK_BODY = 'Touche cette partie sur toi et pense à son nom.';
 const NUMBERS = ['two', 'three', 'four', 'five'] as const;
+const DIGITS: Readonly<Record<string, number>> = { two: 2, three: 3, four: 4, five: 5 };
 
 const body: Skill = {
   id: 'acm1-corps',
   title: 'Le corps',
   levels: 5,
-  version: 1,
+  version: 2,
   lesson: {
     memo: [
-      'Le haut : head (tête), face (visage), eye (œil), ear (oreille), nose (nez), mouth (bouche), hair (cheveux), neck (cou).',
-      'Le corps : arm (bras), hand (main), leg (jambe), foot (pied), knee (genou), back (dos).',
-      'Au **pluriel** : eye → eyes. Attention aux surprises : foot → feet, tooth → teeth !',
+      'En haut : head = tête, face = visage, hair = cheveux, eye = œil ; ear = oreille, nose = nez, mouth = bouche, neck = cou.',
+      'Aussi : arm = bras, hand = main, leg = jambe ; foot = pied, knee = genou, back = dos.',
+      'Au **pluriel**, on ajoute souvent un s, mais foot → feet et tooth → teeth !',
     ],
-    source: source('Mots : British Council, « Body flashcards », « Head flashcards » et chansons.'),
-    sources: ['cycle3-2020', 'bck-flashcards-body', 'bck-flashcards-head', 'bck-song-trousers', 'bck-song-tooth'],
+    source: source(DESCRIBE_GOAL, 'Mots : British Council, « Body flashcards », « Head flashcards » et chansons.'),
+    sources: ['lve-cm-2026', 'bck-flashcards-body', 'bck-flashcards-head', 'bck-song-trousers', 'bck-song-tooth'],
   },
+  sens: [
+    {
+      type: 'usage',
+      text: 'Avec la comptine « Head, Shoulders, Knees and Toes », tu peux montrer les parties du corps.',
+      source: 'lve-c2-2026',
+      citation:
+        "comptine Head, Shoulders, Knees and Toes, l'élève associe les mots aux parties du corps énoncées en les désignant",
+    },
+  ],
   generate: (rng, level): QuestionDraft => {
     if (level === 1)
-      return pickEnglish(
-        rng,
-        BODY.slice(0, 7),
-        'le corps',
-        'Touche cette partie de ton corps et pense au mot entendu en classe ou en chanson.',
+      return guided(
+        pickEnglish(
+          rng,
+          BODY.slice(0, 7),
+          'le corps',
+          'Touche cette partie de ton corps. Quel mot as-tu entendu en chanson ?',
+        ),
+        BODY,
+        THINK_BODY,
       );
-    if (level === 2) return understand(rng, BODY, 'le corps');
-    if (level === 3) return write(rng, BODY.slice(0, 14).map(withArticle), 'le corps');
+    if (level === 2) return guided(understand(rng, BODY, 'le corps'), BODY, THINK_BODY);
+    if (level === 3) {
+      const list = BODY.slice(0, 14).map(withArticle);
+      return guided(write(rng, list, 'le corps'), list, THINK_BODY);
+    }
     if (level === 4) {
-      if (rng.int(0, 2) === 0) return pairs(rng, BODY, 5);
+      if (rng.int(0, 2) === 0) return guided(pairs(rng, BODY, 5), BODY, THINK_BODY);
       const p = rng.pick(PLURALS);
       return {
         prompt: `Écris le pluriel en anglais : « one ${p.one} » → « two … » (${p.fr}).`,
@@ -414,11 +551,11 @@ const body: Skill = {
         traps: p.wrong.map((w) => ({ text: w, why: `Le pluriel de « ${p.one} » est « ${p.many} ».` })),
         hint: 'Certains pluriels ajoutent un s. D’autres changent les lettres du milieu.',
         steps: [
-          `Il y en a deux : on met « ${p.one} » au pluriel.`,
+          `Regarde le nombre « two » : mets « ${p.one} » au pluriel.`,
           p.many === `${p.one}s`
-            ? 'Ce pluriel est régulier : on ajoute un s.'
-            : 'Ce pluriel est irrégulier : les lettres du milieu changent, sans s.',
-          `Réponse : **${p.many}**`,
+            ? 'Ajoute simplement un s à la fin du mot.'
+            : 'Remplace les deux « o » par deux « e », sans ajouter de s.',
+          `Écris le pluriel : **${p.many}**`,
         ],
       };
     }
@@ -437,14 +574,17 @@ const body: Skill = {
     const otherIndex = (i + 1) % 3;
     const good = `It’s got ${n} ${asked}`;
     return {
-      prompt: `Lis la fiche du monstre. Combien ${fr[asked] ?? ''} a-t-il ? Réponds en anglais : commence par « It’s got ».`,
+      prompt: `Lis la fiche du monstre. Combien ${fr[asked] ?? ''} a-t-il ? Réponds en anglais : commence par « It’s got » ou « It has got ».`,
       figure: {
         kind: 'document',
         title: 'My monster',
         lines: parts.map((p, j) => `My monster has got ${at(nums, j)} ${p}.`),
         credit: 'Écrit pour l’exercice.',
       },
-      answer: { kind: 'text', accepted: full([good, `It has got ${n} ${asked}`]) },
+      answer: {
+        kind: 'text',
+        accepted: full([n, String(DIGITS[n])].flatMap((x) => [`It’s got ${x} ${asked}`, `It has got ${x} ${asked}`])),
+      },
       traps: [
         {
           text: `It’s got ${at(nums, otherIndex)} ${asked}.`,
@@ -459,9 +599,10 @@ const body: Skill = {
       ],
       hint: 'Trouve la ligne qui parle de cette partie du corps. Recopie son nombre.',
       steps: [
-        `La ligne dit : « My monster has got ${n} ${asked}. »`,
-        'Dans la réponse, « it » remplace « my monster ». « It has got » devient « It’s got ».',
-        `Réponse : **${good}.**`,
+        `Cherche la ligne qui finit par « ${asked} ».`,
+        `Recopie son nombre : « ${n} ».`,
+        'Commence par « It’s got » : « it » désigne le monstre.',
+        `Écris la phrase : **${good}.**`,
       ],
     };
   },
@@ -481,28 +622,46 @@ const coloured = (w: Word, c: Word, article: string) =>
   names(c).flatMap((col) => names(w).map((name) => `${article}${col} ${name}`));
 /** « un pull » → « le pull », « une jupe » → « la jupe ». */
 const definite = (fr: string) => fr.replace(/^une /, 'la ').replace(/^un /, 'le ');
+const THINK_CLOTHES = 'Imagine ce vêtement et pense à son nom.';
+/** « a skirt » ; « a pair of jeans » quand le français dit « un » pour un mot anglais pluriel. */
+const CLOTHES_WRITE: readonly Word[] = CLOTHES.map((w) => {
+  const article = ONE_CLOTHES.includes(w.en) ? 'a ' : w.fr.startsWith('un ') ? 'a pair of ' : '';
+  return article ? { ...w, alt: [...(w.alt ?? []), ...names(w).map((n) => `${article}${n}`)] } : w;
+});
 
 const clothes: Skill = {
   id: 'acm1-vetements',
   title: 'Les vêtements',
   levels: 5,
-  version: 1,
+  version: 2,
   lesson: {
     memo: [
-      'Les habits : jumper (pull), coat (manteau), skirt (jupe), dress (robe), shirt (chemise).',
-      'Souvent au pluriel : trousers (pantalon), jeans, shorts, socks (chaussettes), shoes (chaussures).',
-      'La couleur se place avant le nom : a red jumper. Au **pluriel**, sans « a » : red socks.',
+      'Les habits : jumper = pull, coat = manteau, skirt = jupe ; dress = robe, shirt = chemise, socks = chaussettes.',
+      'Au **pluriel** aussi : trousers = pantalon, jeans = jean, shorts = short, shoes = chaussures.',
+      'La couleur se place avant le nom : a red jumper, ou red socks sans « a ».',
     ],
-    source: source('Mots : British Council, « Clothes flashcards » (séries 1 et 2) ; « Adjectives ».'),
-    sources: ['cycle3-2020', 'bck-flashcards-clothes-1', 'bck-flashcards-clothes-2', 'bck-adjectives', 'bck-have-got'],
+    source: source(DESCRIBE_GOAL, 'Mots : British Council, « Clothes flashcards » (séries 1 et 2) ; « Adjectives ».'),
+    sources: ['lve-cm-2026', 'bck-flashcards-clothes-1', 'bck-flashcards-clothes-2', 'bck-adjectives', 'bck-have-got'],
   },
+  sens: [
+    {
+      type: 'usage',
+      text: 'Pour demander ce que porte une fille ou une femme, tu dis « What is she wearing? ».',
+      source: 'lve-c2-2026',
+      citation: 'What is she wearing?',
+    },
+  ],
   generate: (rng, level): QuestionDraft => {
     if (level === 1)
-      return pickEnglish(
-        rng,
-        ['skirt', 'dress', 'jumper', 'socks', 'shoes', 'coat', 'jeans'].map((en) => word(CLOTHES, en)),
-        'un vêtement',
-        'Regarde tes habits. Quel mot anglais as-tu entendu pour celui-ci ?',
+      return guided(
+        pickEnglish(
+          rng,
+          ['skirt', 'dress', 'jumper', 'socks', 'shoes', 'coat', 'jeans'].map((en) => word(CLOTHES, en)),
+          'un vêtement',
+          'Regarde tes habits. Quel mot anglais as-tu entendu pour celui-ci ?',
+        ),
+        CLOTHES,
+        THINK_CLOTHES,
       );
     if (level === 2) {
       if (rng.int(0, 2) === 0) {
@@ -518,30 +677,27 @@ const clothes: Skill = {
           answer,
           traps,
           hint: 'Écoute bien le dernier mot de la phrase.',
-          steps: [`On entend « Look at my ${w.en}. »`, `Réponse : **${w.fr}**`],
+          steps: [
+            'Écoute encore une fois la phrase.',
+            `Repère le dernier mot : « ${w.en} ».`,
+            `Choisis son sens : **${w.fr}**`,
+          ],
         };
       }
-      return understand(rng, CLOTHES, 'un vêtement');
+      return guided(understand(rng, CLOTHES, 'un vêtement'), CLOTHES, THINK_CLOTHES);
     }
-    if (level === 3)
-      return write(
-        rng,
-        CLOTHES.map((w) => {
-          // « a skirt » ; « a pair of jeans » quand le français dit « un » pour un mot anglais pluriel.
-          const article = ONE_CLOTHES.includes(w.en) ? 'a ' : w.fr.startsWith('un ') ? 'a pair of ' : '';
-          return article ? { ...w, alt: [...(w.alt ?? []), ...names(w).map((n) => `${article}${n}`)] } : w;
-        }),
-        'un vêtement',
-      );
+    if (level === 3) return guided(write(rng, CLOTHES_WRITE, 'un vêtement'), CLOTHES_WRITE, THINK_CLOTHES);
     if (level === 4) {
       const many = rng.int(0, 1) === 0;
       const w = word(CLOTHES, rng.pick(many ? MANY_CLOTHES : ONE_CLOTHES));
       const c = rng.pick(PLAIN_COLOURS);
       const good = many ? `${c.en} ${w.en}` : `a ${c.en} ${w.en}`;
-      const forms = coloured(w, c, many ? '' : 'a ');
+      const pair = many && w.fr.startsWith('un ') ? coloured(w, c, 'a pair of ') : [];
+      const forms = [...coloured(w, c, many ? '' : 'a '), ...pair];
       const frPhrase = `${w.fr} de couleur « ${c.fr} »`;
       return {
-        prompt: `Écris en anglais : ${frPhrase}${many ? ' (sans « a »)' : ' (avec « a »)'}.`,
+        // « a pair of … » est juste aussi : pas de consigne « sans a » pour ces mots.
+        prompt: `Écris en anglais : ${frPhrase}${pair.length > 0 ? '' : many ? ' (sans « a »)' : ' (avec « a »)'}.`,
         answer: { kind: 'text', accepted: full(forms) },
         traps: [
           {
@@ -556,9 +712,10 @@ const clothes: Skill = {
         ],
         hint: 'Dans l’ordre : (a), la couleur, puis le vêtement.',
         steps: [
-          `La couleur « ${c.fr} » se dit « ${c.en} », le vêtement « ${w.en} ».`,
-          'La couleur se place avant le nom.',
-          `Réponse : **${good}**`,
+          `Traduis les deux mots : « ${c.en} » et « ${w.en} ».`,
+          'Place la couleur avant le vêtement.',
+          many ? 'Oublie « a » : le vêtement est au pluriel.' : 'Ajoute « a » tout au début.',
+          `Écris : **${good}**`,
         ],
       };
     }
@@ -591,14 +748,14 @@ const clothes: Skill = {
         { text: `a ${c2.en} ${asked}`, why: `« ${c2.en} » est la couleur d’un autre habit ${de(kid)}.` },
         { text: `a ${asked} ${c1.en}`, why: 'En anglais, la couleur se place avant le nom.' },
         { text: `${c1.en} ${asked}`, why: 'Il manque le petit mot « a » au début.' },
-        { text: c1.en, why: 'La bonne couleur ! Écris aussi « a » devant et le vêtement après.' },
+        { text: c1.en, why: 'Il manque « a » et le vêtement.' },
       ],
       hint: `Comment dit-on « ${w.fr} » en anglais ? Cherche ce mot sur la ligne ${de(kid)}.`,
       steps: [
-        `« ${w.fr} » se dit « ${asked} ».`,
-        `Sur la ligne ${de(kid)} : « ${asked} is ${c1.en} » (${c1.fr}).`,
-        'Pour la réponse, la couleur passe avant le nom.',
-        `Réponse : **${good}**`,
+        `Traduis « ${w.fr} » : c’est « ${asked} ».`,
+        `Cherche la ligne ${de(kid)} : « ${asked} is ${c1.en} ».`,
+        'Place « a », puis la couleur, puis le vêtement.',
+        `Écris : **${good}**`,
       ],
     };
   },
@@ -606,24 +763,27 @@ const clothes: Skill = {
 
 // ——— 5. Le génitif 's ———
 
-const OWNERS: readonly { readonly en: string; readonly fr: string }[] = [
+const OWNERS: readonly { readonly en: string; readonly fr: string; readonly alt?: readonly string[] }[] = [
   { en: 'Tom', fr: 'de Tom' },
   { en: 'Lisa', fr: 'de Lisa' },
   { en: 'Ana', fr: 'd’Ana' },
   { en: 'Emir', fr: 'd’Emir' },
   { en: 'my sister', fr: 'de ma sœur' },
   { en: 'my brother', fr: 'de mon frère' },
-  { en: 'my mum', fr: 'de ma mère' },
+  { en: 'my mum', fr: 'de ma mère', alt: ['my mother', 'my mom', 'my mummy', 'my mommy'] },
 ];
-const THINGS: readonly { readonly en: string; readonly fr: string }[] = [
+const THINGS: readonly { readonly en: string; readonly fr: string; readonly alt?: readonly string[] }[] = [
   { en: 'dog', fr: 'Le chien' },
   { en: 'cat', fr: 'Le chat' },
-  { en: 'bike', fr: 'Le vélo' },
+  { en: 'bike', fr: 'Le vélo', alt: ['bicycle'] },
   { en: 'bag', fr: 'Le sac' },
-  { en: 'jumper', fr: 'Le pull' },
+  { en: 'jumper', fr: 'Le pull', alt: ['sweater', 'pullover'] },
   { en: 'coat', fr: 'Le manteau' },
 ];
 const phrase = (owner: string, thing: string) => `${owner}’s ${thing}`;
+
+const PLURAL_S = 'Ajoute seulement l’apostrophe : ce pluriel finit déjà par s.';
+const PLURAL_NO_S = 'Ajoute ’s : ce pluriel ne finit pas par s.';
 
 /** Pluriels (réguliers et irréguliers) et deux propriétaires. */
 const HARD: readonly {
@@ -639,7 +799,7 @@ const HARD: readonly {
     fr: 'La maison de mes parents',
     words: 'house, my, parents',
     good: ['my parents’ house'],
-    rule: 'Le propriétaire est un pluriel qui finit par s : on ajoute seulement l’apostrophe.',
+    rule: PLURAL_S,
     traps: [
       ['my parents’s house', '« parents » finit déjà par s : ajoute seulement l’apostrophe.'],
       ['my parents house', 'Sans apostrophe, le s ne montre que le pluriel.'],
@@ -649,7 +809,7 @@ const HARD: readonly {
     fr: 'Le chien de mes grands-parents',
     words: 'dog, grandparents, my',
     good: ['my grandparents’ dog'],
-    rule: 'Le propriétaire est un pluriel qui finit par s : on ajoute seulement l’apostrophe.',
+    rule: PLURAL_S,
     traps: [
       ['my grandparents’s dog', 'Pluriel en s : ajoute seulement l’apostrophe.'],
       ['my grandparents dog', 'Sans apostrophe, le s ne montre que le pluriel.'],
@@ -659,7 +819,7 @@ const HARD: readonly {
     fr: 'L’école de nos enfants',
     words: 'children, our, school',
     good: ['our children’s school'],
-    rule: 'Le propriétaire est un pluriel sans s : on ajoute ’s.',
+    rule: PLURAL_NO_S,
     traps: [
       ['our childrens’ school', '« children » est déjà un pluriel : écris « children’s ».'],
       ['our childrens school', 'Il faut une apostrophe : « children’s ».'],
@@ -669,7 +829,7 @@ const HARD: readonly {
     fr: 'Le fils d’Anne et Gary',
     words: 'and, Anne, Gary, son',
     good: ['Anne and Gary’s son'],
-    rule: 'Il y a deux propriétaires ensemble : ’s va après le dernier nom.',
+    rule: 'Ajoute ’s après le dernier des deux noms seulement.',
     traps: [
       ['Anne’s and Gary son', 'Pour deux propriétaires ensemble, ’s va après le dernier nom.'],
       ['Anne and Gary son', 'Il manque le ’s après le dernier nom.'],
@@ -679,7 +839,7 @@ const HARD: readonly {
     fr: 'La voiture de mes cousins',
     words: 'car, cousins, my',
     good: ['my cousins’ car'],
-    rule: 'Le propriétaire est un pluriel qui finit par s : on ajoute seulement l’apostrophe.',
+    rule: PLURAL_S,
     traps: [
       ['my cousins’s car', '« cousins » finit déjà par s : ajoute seulement l’apostrophe.'],
       ['my cousins car', 'Sans apostrophe, le s ne montre que le pluriel.'],
@@ -689,7 +849,7 @@ const HARD: readonly {
     fr: 'Les chaussures des femmes',
     words: 'shoes, the, women',
     good: ['the women’s shoes', 'women’s shoes'],
-    rule: 'Le propriétaire est un pluriel sans s : on ajoute ’s.',
+    rule: PLURAL_NO_S,
     traps: [
       ['the womens’ shoes', '« women » est déjà un pluriel : écris « women’s ».'],
       ['the womens shoes', 'Il faut une apostrophe : « women’s ».'],
@@ -699,7 +859,7 @@ const HARD: readonly {
     fr: 'Le sac de James',
     words: 'bag, James',
     good: ['James’ bag', 'James’s bag'],
-    rule: 'Le prénom finit par s : on peut ajouter l’apostrophe seule, ou ’s.',
+    rule: 'Ajoute l’apostrophe seule, ou ’s : les deux sont justes.',
     traps: [
       ['Jame’s bag', 'Le prénom est « James » : garde le s, puis ajoute l’apostrophe.'],
       ['James bag', 'Il manque l’apostrophe.'],
@@ -711,16 +871,27 @@ const genitive: Skill = {
   id: 'acm1-genitif',
   title: 'Le génitif ’s',
   levels: 5,
-  version: 1,
+  version: 2,
   lesson: {
     memo: [
-      'Pour dire à qui est une chose, on utilise le **génitif** : le propriétaire, puis **’s**, puis la chose.',
-      'Exemple : Tom’s dog (le chien de Tom). Pluriel en s : my parents’ house. Pluriel sans s : children’s.',
-      'Prénom en s : James’ bag ou James’s bag. Deux propriétaires ensemble : Anne and Gary’s son.',
+      'Le **génitif** dit à qui est une chose : Tom’s dog = le chien de Tom.',
+      'Mets le propriétaire, puis **’s**, puis la chose ; après un **pluriel** en s, seulement l’apostrophe.',
+      'Cas spéciaux : children’s, James’ ou James’s, et Anne and Gary’s son.',
     ],
-    source: source('Règles : British Council, LearnEnglish, « Possessive ’s » et « Possessives: nouns ».'),
-    sources: ['cycle3-2020', 'bc-possessive-s', 'bc-possessives-nouns'],
+    source: source(
+      GRAMMAR_GOAL,
+      'Règles : British Council, LearnEnglish, « Possessive ’s » et « Possessives: nouns ».',
+    ),
+    sources: ['lve-cm-2026', 'bc-possessive-s', 'bc-possessives-nouns'],
   },
+  sens: [
+    {
+      type: 'usage',
+      text: 'Avec « ’s », tu peux dire à qui est une chose ou quel lien unit deux personnes.',
+      source: 'bc-possessive-s',
+      citation: "We can use possessive 's to talk about the relationship between people or to say who owns something.",
+    },
+  ],
   generate: (rng, level): QuestionDraft => {
     const owner = rng.pick(level === 1 ? OWNERS.slice(0, 4) : OWNERS);
     const thing = rng.pick(THINGS);
@@ -739,23 +910,33 @@ const genitive: Skill = {
         traps,
         hint: 'Qui possède ? Il se place en premier, avec un petit signe et une lettre.',
         steps: [
-          `Le propriétaire est « ${owner.en} » : il vient d’abord, avec ’s.`,
-          `Puis la chose : « ${thing.en} ».`,
-          `Réponse : **${good}**`,
+          `Cherche à qui est la chose : « ${owner.en} ».`,
+          `Place ce propriétaire en premier, avec ’s.`,
+          `Choisis la réponse : **${good}**`,
         ],
       };
     }
     if (level === 3)
       return {
         prompt: `Écris en anglais, avec ’s : « ${fr} ».`,
-        answer: { kind: 'text', accepted: full([good]) },
+        answer: {
+          kind: 'text',
+          accepted: full(
+            [owner.en, ...(owner.alt ?? [])].flatMap((o) => [thing.en, ...(thing.alt ?? [])].map((t) => phrase(o, t))),
+          ),
+        },
         traps: [
           { text: `${owner.en}s ${thing.en}`, why: 'Il manque l’apostrophe avant le s.' },
           { text: `${owner.en} ${thing.en}`, why: 'Il manque le ’s après le propriétaire.' },
           { text: `${thing.en}’s ${owner.en}`, why: 'Ordre inversé : le propriétaire vient en premier.' },
         ],
         hint: 'Commence par le propriétaire. Ajoute l’apostrophe et un s. Termine par la chose.',
-        steps: [`Propriétaire : « ${owner.en}’s ».`, `Chose : « ${thing.en} ».`, `Réponse : **${good}**`],
+        steps: [
+          `Repère le propriétaire : « ${owner.en} ».`,
+          'Écris-le, puis ajoute ’s.',
+          `Termine par la chose : « ${thing.en} ».`,
+          `Vérifie ta réponse : **${good}**`,
+        ],
       };
     if (level === 4) {
       const h = rng.pick(HARD);
@@ -765,11 +946,7 @@ const genitive: Skill = {
         answer: { kind: 'text', accepted: full(h.good) },
         traps: h.traps.map(([text, why]) => ({ text, why })),
         hint: 'Le propriétaire finit-il par un s ? Est-ce un seul nom ou plusieurs ?',
-        steps: [
-          'On cherche le propriétaire, puis on regarde comment son nom finit.',
-          h.rule,
-          `Réponse : **${answer}**`,
-        ],
+        steps: ['Repère le propriétaire et regarde comment son nom finit.', h.rule, `Écris la réponse : **${answer}**`],
       };
     }
     // Niveau 5 : lire des messages, puis trouver le propriétaire (liens de famille).
@@ -793,9 +970,12 @@ const genitive: Skill = {
     ];
     const phraseGood = `${sibling}’s ${g1}`;
     return {
-      prompt: `Lis le texte. À qui est « the ${c1} ${g1} » ? Écris en anglais : le prénom, ’s, puis « ${g1} ».`,
+      prompt: `Lis le texte. À qui est « the ${c1} ${g1} » ? Écris en anglais le prénom, ’s et « ${g1} ». La couleur est permise.`,
       figure: { kind: 'document', title: 'Whose is it?', lines, credit: 'Écrit pour l’exercice.' },
-      answer: { kind: 'text', accepted: full([phraseGood, `It’s ${phraseGood}`, `It is ${phraseGood}`]) },
+      answer: {
+        kind: 'text',
+        accepted: full([phraseGood, `${sibling}’s ${c1} ${g1}`].flatMap((x) => [x, `It’s ${x}`, `It is ${x}`])),
+      },
       traps: [
         { text: `${boss}’s ${g1}`, why: `Ce n’est pas ${boss} : la phrase parle de « ${boss}’s ${rel} ».` },
         { text: `${third}’s ${g1}`, why: `${third} a un autre objet.` },
@@ -804,9 +984,10 @@ const genitive: Skill = {
       ],
       hint: 'Cherche qui a cet objet. Puis trouve le prénom de cette personne.',
       steps: [
-        `« ${boss}’s ${rel} » veut dire « ${relFr} ${de(boss)} » : c’est ${sibling}.`,
-        `Donc l’objet « ${c1} ${g1} » est à ${sibling}.`,
-        `Réponse : **${phraseGood}**`,
+        `Cherche « ${c1} ${g1} » : c’est à « ${boss}’s ${rel} ».`,
+        `Traduis ces mots : ${relFr} ${de(boss)}.`,
+        `Trouve son prénom : « ${sibling} ».`,
+        `Écris : **${phraseGood}**`,
       ],
     };
   },

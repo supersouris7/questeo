@@ -1,8 +1,8 @@
 /**
  * Anglais CM1, « Famille, corps, vêtements » (lot an-cm1-04) : données citées.
  * Chaque fait porte l'identifiant de sa source (registre `sources.ts`) et une citation exacte du texte consulté
- * le 25/11/2026 (copies d'archive web.archive.org des pages et fiches PDF du British Council ; programme du
- * cycle 3). Les espaces et retours à la ligne des fiches PDF sont réduits à une espace.
+ * le 25/11/2026 (copies d'archive web.archive.org des pages et fiches PDF du British Council) et le 27/11/2026
+ * (programme de langues vivantes du cours moyen, arrêté du 26 février 2026). Les espaces et retours à la ligne des fiches PDF sont réduits à une espace.
  */
 import type { Fait } from './presentation-faits.ts';
 import type { Word } from './temps-faits.ts';
@@ -14,7 +14,7 @@ export const FAMILY: readonly Word[] = [
   { en: 'brother', fr: 'frère', typo: 'broter' },
   { en: 'sister', fr: 'sœur', typo: 'sistre' },
   { en: 'baby', fr: 'bébé', typo: 'babby' },
-  { en: 'grandmother', fr: 'grand-mère', alt: ['grandma', 'granny', 'gran'], typo: 'grandmoter' },
+  { en: 'grandmother', fr: 'grand-mère', alt: ['grandma', 'granny', 'gran', 'grannie', 'nan'], typo: 'grandmoter' },
   { en: 'grandfather', fr: 'grand-père', alt: ['grandad', 'granddad', 'grandpa'], typo: 'grandfater' },
   { en: 'mum', fr: 'maman', alt: ['mom', 'mummy', 'mommy', 'mother'], typo: 'mume' },
   { en: 'dad', fr: 'papa', alt: ['daddy', 'father'], typo: 'dade' },
@@ -67,7 +67,7 @@ export const PLURALS: readonly {
 /** Les vêtements : fiches « Clothes flashcards » (séries 1 et 2). */
 export const CLOTHES: readonly Word[] = [
   { en: 't-shirt', fr: 'un tee-shirt', alt: ['t shirt', 'tshirt', 'tee-shirt', 'tee shirt'], typo: 't-shurt' },
-  { en: 'trousers', fr: 'un pantalon', alt: ['pants'], typo: 'trouser' },
+  { en: 'trousers', fr: 'un pantalon', typo: 'trouser' },
   { en: 'skirt', fr: 'une jupe', typo: 'skurt' },
   { en: 'dress', fr: 'une robe', typo: 'dres' },
   { en: 'shirt', fr: 'une chemise', typo: 'shurt' },
@@ -90,21 +90,21 @@ export const CLOTHES: readonly Word[] = [
 export const FAITS: readonly Fait[] = [
   {
     id: 'programme-famille',
-    sourceId: 'cycle3-2020',
-    quote: 'sa famille, son environnement concret et immédiat',
-    claim: 'La famille de l’élève fait partie des mots à comprendre au cycle 3.',
+    sourceId: 'lve-cm-2026',
+    quote: 'champ lexical de la famille, de l’environnement immédiat',
+    claim: 'Les mots de la famille sont à repérer au CM1.',
   },
   {
-    id: 'programme-corps',
-    sourceId: 'cycle3-2020',
-    quote: 'Le corps humain, les vêtements, les modes de vie.',
-    claim: 'Le corps et les vêtements sont au lexique du cycle 3.',
+    id: 'programme-description',
+    sourceId: 'lve-cm-2026',
+    quote: 'l’élève peut décrire brièvement des personnes, des objets ou des animaux familiers',
+    claim: 'Décrire au CM1 : le corps, les vêtements et « have got » y servent (le programme ne les nomme pas).',
   },
   {
-    id: 'programme-genitif',
-    sourceId: 'cycle3-2020',
-    quote: 'le génitif (si la langue en comporte)',
-    claim: 'Le génitif est une structure grammaticale du cycle 3.',
+    id: 'programme-structures',
+    sourceId: 'lve-cm-2026',
+    quote: 'Reconnaitre quelques structures et formes grammaticales simples appartenant à un répertoire mémorisé.',
+    claim: 'Cadre de « have got » et du génitif au CM1 (le programme ne les nomme pas).',
   },
   {
     id: 'famille-fiche-1',
