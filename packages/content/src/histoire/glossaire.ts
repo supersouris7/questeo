@@ -269,6 +269,20 @@ export const GLOSSAIRE: readonly SubjectTerm[] = [
     example: 'Une alliance peut agrandir un royaume.',
   },
   {
+    id: 'reliques',
+    word: 'reliques',
+    forms: ['reliques', 'relique'],
+    definition: 'Des objets ou des restes liés à un saint ou à Jésus, que des croyants vénèrent.',
+    example: 'Louis IX fait garder des reliques à la Sainte-Chapelle.',
+  },
+  {
+    id: 'college-de-france',
+    word: 'Collège de France',
+    forms: ['collège de france', 'college de france'],
+    definition: 'Un lieu créé par François Ier en 1530 pour des savants qui enseignent et font des recherches.',
+    example: 'Au Collège de France, on étudie le grec et les mathématiques.',
+  },
+  {
     id: 'edit-de-nantes',
     word: 'édit de Nantes',
     forms: ['édit de nantes', 'edit de nantes'],
@@ -281,7 +295,7 @@ export const GLOSSAIRE: readonly SubjectTerm[] = [
     word: 'guerres de religion',
     forms: ['guerres de religion', 'guerre de religion'],
     definition: 'Des guerres entre habitants d’un même pays qui ne partagent pas la même religion.',
-    example: 'Le programme cite les guerres de religion parmi les violences.',
+    example: 'Au XVIe siècle, catholiques et protestants se font des guerres de religion.',
   },
   {
     id: 'soleil',

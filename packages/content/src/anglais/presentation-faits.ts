@@ -1,7 +1,8 @@
 /**
  * Anglais CM1, « Se présenter et saluer » (lot an-cm1-01) : données citées.
  * Chaque fait porte l'identifiant de sa source (registre `sources.ts`) et une citation exacte du texte consulté
- * le 24/11/2026 (copies d'archive web.archive.org des pages du British Council ; programme du cycle 3 d'Éduscol).
+ * le 24/11/2026 et le 27/11/2026 (copies d'archive web.archive.org des pages du British Council ; programme de langues
+ * vivantes, arrêté du 26 février 2026 : cycle 2 pour des exemples d'anglais, cours moyen pour le programme).
  */
 
 export interface Fait {
@@ -16,47 +17,113 @@ export interface Fait {
 export type Role = 'saluer' | 'rencontre' | 'repondre' | 'conge';
 
 export interface Phrase {
-  readonly role: Role;
   readonly en: string;
   readonly fr: string;
-  /** Situation donnée à l'élève (français, tutoiement). */
-  readonly situation: string;
-  /** Écritures acceptées en saisie. */
+  /** Moment de l'échange, tel qu'on le dit à l'élève dans l'explication. */
+  readonly moment: string;
+  /** Écritures acceptées en saisie (sans ponctuation finale : voir `punctuated`). */
   readonly accepted: readonly string[];
 }
 
+/** Saisies acceptées : avec ou sans point ou point d'exclamation (collé ou précédé d'une espace). */
+export const punctuated = (forms: readonly string[]): string[] => forms.flatMap((f) => [f, `${f}.`, `${f}!`, `${f} !`]);
+
 export const PHRASES: Readonly<Record<Role, Phrase>> = {
   saluer: {
-    role: 'saluer',
     en: 'Hello!',
     fr: 'bonjour',
-    situation: 'Tu arrives en classe et tu dis bonjour à un copain.',
-    accepted: ['Hello', 'Hello!', 'Hello.', 'Hi', 'Hi!', 'Hi.'],
+    moment: 'quelqu’un arrive et dit bonjour',
+    accepted: ['Hello', 'Hi', 'Hey', 'Hello there', 'Hi there'],
   },
   rencontre: {
-    role: 'rencontre',
     en: 'Nice to meet you.',
     fr: 'enchanté(e)',
-    situation: 'Tu viens de rencontrer quelqu’un et tu es content de faire sa connaissance.',
-    accepted: ['Nice to meet you', 'Nice to meet you.', 'Nice to meet you!'],
+    moment: 'on rencontre une nouvelle personne',
+    accepted: [
+      'Nice to meet you',
+      'It’s nice to meet you',
+      'Pleased to meet you',
+      'I’m pleased to meet you',
+      'Very nice to meet you',
+      'Glad to meet you',
+      'Hello, nice to meet you',
+      'Hi, nice to meet you',
+    ],
   },
   repondre: {
-    role: 'repondre',
     en: 'You too.',
     fr: 'toi aussi',
-    situation: 'Quelqu’un te dit « Nice to meet you. ». Tu réponds « toi aussi ».',
-    accepted: ['You too', 'You too.', 'You too!'],
+    moment: 'on répond à la phrase de rencontre',
+    accepted: ['You too', 'And you', 'Nice to meet you too', 'Nice to meet you, too', 'Pleased to meet you too'],
   },
   conge: {
-    role: 'conge',
     en: 'Bye for now!',
     fr: 'au revoir',
-    situation: 'Tu pars : tu dis au revoir à ton copain.',
-    accepted: ['Bye for now', 'Bye for now!', 'Bye for now.'],
+    moment: 'quelqu’un s’en va',
+    accepted: [
+      'Bye for now',
+      'Bye',
+      'Bye bye',
+      'Bye-bye',
+      'Goodbye',
+      'Good bye',
+      'Good-bye',
+      'Goodbye for now',
+      'See you tomorrow',
+      'See you',
+      'See you soon',
+      'See you later',
+    ],
   },
 };
 
 export const ROLES: readonly Role[] = ['saluer', 'rencontre', 'repondre', 'conge'];
+
+export interface Situation {
+  readonly role: Role;
+  /** Ce que vit l'élève (français, tutoiement, phrases courtes). */
+  readonly text: string;
+  /** Phrase attendue quand on la choisit (« Hello! » ou « Hi! » pour saluer). */
+  readonly en: string;
+  /** Écritures correctes propres à ce moment (« Good morning » le matin). */
+  readonly extra?: readonly string[];
+}
+
+export const SITUATIONS: readonly Situation[] = [
+  {
+    role: 'saluer',
+    text: 'Tu arrives en classe et tu vois un copain. Dis-lui bonjour.',
+    en: 'Hello!',
+    extra: ['Good morning', 'Good afternoon'],
+  },
+  {
+    role: 'saluer',
+    text: 'Le matin, tu retrouves une copine dans la cour. Dis-lui bonjour.',
+    en: 'Hi!',
+    extra: ['Good morning'],
+  },
+  {
+    role: 'saluer',
+    text: 'La visio commence : dis bonjour à ta correspondante anglaise.',
+    en: 'Hello!',
+    extra: ['Good morning', 'Good afternoon'],
+  },
+  {
+    role: 'rencontre',
+    text: 'On te présente un nouvel élève. Dis que cette rencontre te fait plaisir.',
+    en: 'Nice to meet you.',
+  },
+  {
+    role: 'rencontre',
+    text: 'Tu vois ton nouveau voisin pour la première fois. Dis que tu as plaisir à le rencontrer.',
+    en: 'Nice to meet you.',
+  },
+  { role: 'repondre', text: 'Un nouveau voisin te dit « Nice to meet you ». Réponds « toi aussi ».', en: 'You too.' },
+  { role: 'repondre', text: 'En visio, Yuna te dit « Nice to meet you ». Réponds « toi aussi ».', en: 'You too.' },
+  { role: 'conge', text: 'Tu quittes le parc. Dis au revoir à ton copain.', en: 'Bye for now!' },
+  { role: 'conge', text: 'La visio se termine : dis au revoir à la classe anglaise.', en: 'Bye for now!' },
+  { role: 'conge', text: 'C’est l’heure de rentrer : dis au revoir à ta copine.', en: 'Bye for now!' },
+];
 
 export const QUESTIONS = {
   name: { en: 'What’s your name?', asks: 'le prénom' },
@@ -134,9 +201,39 @@ const unitsFact = (sourceId: string, from: number, to: number, quote: string): F
 export const FAITS: readonly Fait[] = [
   {
     id: 'programme-contact-social',
-    sourceId: 'cycle3-2020',
-    quote: 'Établir un contact social (saluer, se présenter, présenter quelqu’un, etc.)',
-    claim: 'Saluer et se présenter font partie du programme (Réagir et dialoguer, cycle 3).',
+    sourceId: 'lve-cm-2026',
+    quote: 'Établir un contact (saluer, se présenter, présenter quelqu’un, etc.)',
+    claim: 'Saluer et se présenter font partie du programme du CM1 (expression orale en interaction).',
+  },
+  {
+    id: 'conge-good-bye',
+    sourceId: 'lve-c2-2026',
+    quote: 'Thank you for everything! Good bye!',
+    claim: '« Good bye » sert aussi à prendre congé.',
+  },
+  {
+    id: 'conge-see-you-soon',
+    sourceId: 'lve-c2-2026',
+    quote: 'See you soon!',
+    claim: '« See you soon » sert aussi à prendre congé.',
+  },
+  {
+    id: 'my-name-is',
+    sourceId: 'lve-c2-2026',
+    quote: 'My name is/My name’s Billy.',
+    claim: 'On répond aussi avec « My name is » ou « My name’s » + prénom.',
+  },
+  {
+    id: 'age-years-old',
+    sourceId: 'lve-c2-2026',
+    quote: 'I’m 6 years old.',
+    claim: 'On peut ajouter « years old » après l’âge.',
+  },
+  {
+    id: 'where-do-you-live',
+    sourceId: 'lve-c2-2026',
+    quote: 'I live in Boston.',
+    claim: 'À « Where do you live? », on répond « I live in » + ville.',
   },
   {
     id: 'saluer-hello-hi',

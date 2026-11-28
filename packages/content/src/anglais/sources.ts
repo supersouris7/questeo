@@ -12,6 +12,15 @@ export const SOURCES: readonly Source[] = [
     consultedOn: '2026-11-25',
   },
   {
+    id: 'lve-c2-2026',
+    title:
+      'Programme de langues vivantes étrangères et régionales, cycle 2 (arrêté du 26 février 2026, BO n° 12, annexe 1)',
+    publisher: 'Ministère de l’Éducation nationale',
+    url: 'https://www.education.gouv.fr/bo/2026/Hebdo12/MENE2602911A',
+    textDate: '2026-02-26',
+    consultedOn: '2026-11-27',
+  },
+  {
     id: 'anglais-college-2025',
     title: 'Programme d’anglais pour les classes de collège (annexe 3 de l’arrêté du 5 mai 2025)',
     publisher: 'Ministère de l’Éducation nationale',

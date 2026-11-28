@@ -66,6 +66,13 @@ export const GLOSSAIRE: readonly SubjectTerm[] = [
     example: 'twenty-one s’écrit avec un tiret entre twenty et one.',
   },
   {
+    id: 'unite-nombre',
+    word: 'unité',
+    forms: ['unité', 'unités'],
+    definition: 'Dans un nombre, le chiffre de droite : il compte les « un par un ».',
+    example: 'Dans 25, la dizaine est 20 et l’unité est 5.',
+  },
+  {
     id: 'adjectif',
     word: 'adjectif',
     forms: ['adjectif', 'adjectifs'],

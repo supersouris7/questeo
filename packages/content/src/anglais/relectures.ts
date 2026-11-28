@@ -121,4 +121,9 @@ export const RELECTURES: readonly Relecture[] = [
   { skillId: 'acm1-pronoms-sujets', version: 2, lot: 'rp-an-cm1-02', date: '2026-11-27', verdict: 'ok' },
   { skillId: 'acm1-questions-be', version: 2, lot: 'rp-an-cm1-02', date: '2026-11-27', verdict: 'ok' },
   { skillId: 'acm1-possessifs', version: 3, lot: 'rp-an-cm1-02', date: '2026-11-27', verdict: 'ok' },
+  { skillId: 'acm1-saluer', version: 2, lot: 'rp-an-cm1-01', date: '2026-11-27', verdict: 'ok' },
+  { skillId: 'acm1-your-name', version: 2, lot: 'rp-an-cm1-01', date: '2026-11-27', verdict: 'ok' },
+  { skillId: 'acm1-how-old', version: 2, lot: 'rp-an-cm1-01', date: '2026-11-27', verdict: 'ok' },
+  { skillId: 'acm1-nombres-1-31', version: 2, lot: 'rp-an-cm1-01', date: '2026-11-27', verdict: 'ok' },
+  { skillId: 'acm1-where-live', version: 2, lot: 'rp-an-cm1-01', date: '2026-11-27', verdict: 'ok' },
 ];

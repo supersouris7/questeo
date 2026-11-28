@@ -52,6 +52,8 @@ export interface NotionGuidee {
 
 const PROGRAMME = 'Programme du cycle 3 (BOEN n° 31 du 30 juillet 2020, version 2023), histoire, classe de CM1';
 
+const CREDIT = 'Texte écrit pour l’exercice, d’après le programme de CM1.';
+
 const steps = (g: Guide, answer: string) => [...g.etapes, `Retiens la réponse : **${answer}**.`];
 
 const relier = (pairs: readonly (readonly [string, string])[]) =>
@@ -112,7 +114,7 @@ function level3(rng: Rng, n: NotionGuidee): QuestionDraft {
   };
 }
 
-function question(rng: Rng, n: NotionGuidee, level: Level): QuestionDraft {
+function question(rng: Rng, n: NotionGuidee, level: Level, credit: string): QuestionDraft {
   switch (level) {
     case 1: {
       const f = rng.pick(n.faits);
@@ -149,7 +151,7 @@ function question(rng: Rng, n: NotionGuidee, level: Level): QuestionDraft {
         kind: 'document',
         title: d.title,
         lines: d.lines,
-        credit: 'Texte écrit pour l’exercice, d’après le programme de CM1.',
+        credit,
       };
       return { ...written(`Lis le texte. ${q.q}`, q), figure, targetSeconds: 60 };
     }
@@ -157,7 +159,7 @@ function question(rng: Rng, n: NotionGuidee, level: Level): QuestionDraft {
 }
 
 /** Notion à 5 niveaux (grille de docs/contenus/README.md §1). */
-export function notionGuidee(n: NotionGuidee, programme: string): Skill {
+export function notionGuidee(n: NotionGuidee, programme: string, credit = CREDIT): Skill {
   const preuves: readonly Preuve[] = [...n.faits, ...n.libres, ...n.docs.flatMap((d) => d.qs)];
   const sources = [...new Set([programme, ...preuves.flatMap((p) => (p.source ? [p.source] : [])), n.sens.source])];
   return {
@@ -167,6 +169,6 @@ export function notionGuidee(n: NotionGuidee, programme: string): Skill {
     version: 2,
     lesson: { memo: n.memo, source: PROGRAMME, sources },
     sens: [n.sens],
-    generate: (rng: Rng, level: Level): QuestionDraft => question(rng, n, level),
+    generate: (rng: Rng, level: Level): QuestionDraft => question(rng, n, level, credit),
   };
 }
