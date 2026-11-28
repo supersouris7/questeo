@@ -312,6 +312,13 @@ export const GLOSSAIRE: readonly SubjectTerm[] = [
     example: 'Elle le chante.',
   },
   {
+    id: 'voyelle',
+    word: 'voyelle',
+    forms: ['voyelles'],
+    definition: 'Une des lettres a, e, i, o, u, y.',
+    example: '« arbre » commence par une voyelle.',
+  },
+  {
     id: 'h-muet',
     word: 'h muet',
     forms: [],

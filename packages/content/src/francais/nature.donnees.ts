@@ -2,6 +2,7 @@
  * Données du chapitre « Nature des mots » (CM1) : faits cités et banques de phrases écrites pour l'exercice.
  * Chaque fait porte l'identifiant de sa source (registre `sources.ts`) et sa citation exacte.
  */
+import type { Sens } from '../types.ts';
 import type { Fait } from './phrases.donnees.ts';
 
 const PROGRAMME = 'francais-cycle3-2025';
@@ -91,6 +92,47 @@ export const sourcesDe = (...ids: readonly string[]): string[] => [
   ...new Set([PROGRAMME, ...ids.map((id) => faitNature(id).source)]),
 ];
 
+/** « Pourquoi apprendre ça ? » (README §9) : une phrase par notion, citation exacte. */
+export const SENS_NATURE = {
+  natureFonction: {
+    type: 'savais-tu',
+    text: '« Fonction » vient d’un mot latin, « functio » : « accomplissement, exécution ».',
+    source: 'academie-fonction',
+    citation: 'Emprunté du latin functio, « accomplissement, exécution »',
+  },
+  articles: {
+    type: 'savais-tu',
+    text: '« Article » vient du latin « articulus », formé sur « artus » : « articulation ».',
+    source: 'academie-article',
+    citation: 'Emprunté du latin articulus, diminutif de artus, « articulation »',
+  },
+  determinants: {
+    type: 'histoire',
+    text: 'En 1393, un texte appelle l’index le doigt « démonstratif » : celui qui sert à montrer.',
+    source: 'cnrtl-demonstratif',
+    citation: "1393 « qui sert à montrer » le doit demonstratif [l'index]",
+  },
+  conjonctions: {
+    type: 'savais-tu',
+    text: '« Conjonction » vient d’un mot latin, « conjunctio », qui veut dire « union ».',
+    source: 'academie-conjonction',
+    citation: 'Emprunté du latin conjunctio, « union »',
+  },
+  adverbes: {
+    type: 'savais-tu',
+    text: '« Adverbe » vient du latin : « ad », « auprès de », et « verbum », « verbe ».',
+    source: 'academie-adverbe',
+    citation: 'Emprunté du latin adverbium, composé de ad, « auprès de », et verbum, « verbe »',
+  },
+  pronoms: {
+    type: 'usage',
+    text: 'Quand on lit, les pronoms qui reprennent des mots demandent une attention particulière.',
+    source: PROGRAMME,
+    citation:
+      'Enfin, lecture et étude de la langue doivent être constamment articulées, tant pour ce qui concerne l’appropriation du lexique que l’observation du fonctionnement des phrases et des textes. Dans cette perspective, les reprises pronominales et le choix des temps verbaux constituent notamment un point d’attention.',
+  },
+} as const satisfies Record<string, Sens>;
+
 // Aucun prénom dans les phrases ; les verbes qui suivent un pronom complément commencent par une consonne.
 
 // ───────────────────────── Nature et fonction ─────────────────────────
@@ -152,9 +194,9 @@ const nv = (nom: string, genre: 'm' | 'f', verbe: string, pluriel = false): NomV
 
 export const NOMS_VERBES: readonly NomVerbe[] = [
   nv('chien', 'm', 'aboie'),
-  nv('soleil', 'm', 'brille'),
+  nv('coq', 'm', 'chante'),
   nv('bébé', 'm', 'dort'),
-  nv('lune', 'f', 'se lève'),
+  nv('porte', 'f', 'grince'),
   nv('voiture', 'f', 'démarre'),
   nv('fille', 'f', 'chante'),
   nv('moineaux', 'm', 'volent', true),
@@ -236,7 +278,7 @@ export const DEMONSTRATIFS = ['ce', 'cet', 'cette', 'ces'];
 /** Un nom, avec ce qu'il faut pour choisir « ce, cet, cette, ces ». */
 export const NOMS_DEMONSTRATIFS: readonly { readonly nom: string; readonly det: string; readonly pourquoi: string }[] =
   [
-    ...(['chien', 'vélo', 'livre', 'ballon'] as const).map((nom) => ({
+    ...(['chien', 'vélo', 'cahier', 'ballon'] as const).map((nom) => ({
       nom,
       det: 'ce',
       pourquoi: `« ${nom} » est masculin singulier et commence par une consonne`,
@@ -368,6 +410,16 @@ export const PHRASES_CONJ: readonly PhraseConj[] = [
   pc('Je voulais entrer, or j’avais oublié la clé.', 'or', ['voulais', 'entrer', 'clé']),
 ];
 
+/** Le rôle en un mot, pour la dernière bulle de l'explication. */
+export const ROLES_COURTS: Record<keyof typeof ROLES, string> = {
+  et: 'ajout',
+  ou: 'choix',
+  mais: 'opposition',
+  car: 'explication',
+  donc: 'conséquence',
+  ni: 'négation',
+};
+
 /** Mots qui ne sont pas des conjonctions de coordination. */
 export const MOTS_NON_CONJ = [
   'chat',
@@ -471,6 +523,9 @@ export const PLURIELS: readonly Pluriel[] = [
   pl('Le robot parle trop.', 'Les robots parlent trop.', 'trop'),
 ];
 
+/** Tous les adverbes employés dans les lignes à compter. */
+export const ADVERBES_DES_LIGNES = ['hier', 'beaucoup', 'demain', 'ici', 'très', 'souvent', 'vite', 'trop', 'déjà'];
+
 export interface LigneAdverbes {
   readonly texte: string;
   readonly n: number;
@@ -509,7 +564,7 @@ export const PHRASES_PRONOMS: readonly PhrasePronom[] = [
   pp('Papa me regarde.', 'me', false),
   pp('Le chien te suit.', 'te', false),
   pp('Mon frère le range.', 'le', false),
-  pp('Ma sœur la porte.', 'la', false),
+  pp('Ma sœur la pousse.', 'la', false),
   pp('Le voisin les salue.', 'les', false),
   pp('La maîtresse lui parle.', 'lui', false),
   pp('Grand-père leur raconte une histoire.', 'leur', false),

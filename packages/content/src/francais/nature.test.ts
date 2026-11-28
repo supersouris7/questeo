@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { generate } from '../catalog.ts';
 import { check } from '../check.ts';
 import { SUBJECT_GLOSSARIES, boldTerms, isDefined } from '../glossaires.ts';
+import { analyzeSkill } from '../lisibilite.ts';
+import { sensIssues } from '../sens.ts';
 import { getSource } from '../sources.ts';
 import { validateVariants } from '../validate.ts';
 import type { Level } from '../types.ts';
 import {
+  ADVERBES_DES_LIGNES,
   CONJONCTIONS,
   DEMONSTRATIFS,
   FAITS_NATURE,
@@ -15,6 +18,7 @@ import {
   LIGNES_DETERMINANTS,
   OBJETS,
   OBJETS_PHRASES,
+  PAIRES,
   PHRASES_ADVERBES,
   PHRASES_CONJ,
   PLURIELS,
@@ -85,8 +89,7 @@ describe('banques de phrases', () => {
       expect(compte(l.texte, ['un', 'une', 'des']), l.texte).toBe(l.indefinis);
       expect(compte(l.texte, ['du', 'au', 'aux', 'de']), l.texte).toBe(0);
     }
-    const adverbes = ['hier', 'beaucoup', 'demain', 'ici', 'très', 'souvent', 'vite', 'trop', 'déjà'];
-    for (const l of LIGNES_ADVERBES) expect(compte(l.texte, adverbes), l.texte).toBe(l.n);
+    for (const l of LIGNES_ADVERBES) expect(compte(l.texte, ADVERBES_DES_LIGNES), l.texte).toBe(l.n);
   });
 
   it('une seule conjonction par phrase, aucune parmi les distracteurs', () => {
@@ -129,5 +132,54 @@ describe('banques de phrases', () => {
 
   it('pronoms compléments : les verbes commencent par une consonne', () => {
     for (const p of OBJETS_PHRASES) expect(p.verbe).toMatch(/^[^aeéèiouh]/);
+  });
+});
+
+describe('repasse : explications, mémo, sens', () => {
+  const chapitre = { id: 'fcm1-nature-mots', subject: 'francais', grade: 'cm1' } as const;
+
+  it.each(skills.map((s) => [s.id, s] as const))('%s : le détecteur ne signale plus rien', (_, s) => {
+    const report = analyzeSkill(s, chapitre);
+    expect({ counts: report.counts, words: report.words }).toEqual({ counts: {}, words: [] });
+  });
+
+  it('chaque notion est en version 2, avec un sens sourcé et conforme', () => {
+    for (const s of skills) {
+      expect(s.version, s.id).toBe(2);
+      expect(s.sens, s.id).toHaveLength(1);
+      expect(sensIssues(s), s.id).toEqual([]);
+      expect(s.lesson.sources, s.id).toContain(s.sens?.[0]?.source);
+    }
+  });
+
+  it('« combien ? » : l’explication cite exactement autant de mots que la réponse', () => {
+    for (const s of skills.slice(1, 5)) {
+      for (const q of tirages(s.id, 5)) {
+        if (q.answer.kind !== 'number') throw new Error(s.id);
+        const liste = q.steps.at(-2) ?? '';
+        expect(liste.match(/« /g)?.length, `${s.id} ${liste}`).toBe(q.answer.value.n);
+        expect(q.steps.at(-1)).toContain(`**${q.answer.value.n}**`);
+      }
+    }
+  });
+
+  it('la dernière bulle donne la réponse en gras', () => {
+    for (const s of skills) {
+      for (const level of LEVELS) {
+        for (const q of tirages(s.id, level)) expect(q.steps.at(-1), `${s.id} N${level}`).toMatch(/\*\*.+\*\*/);
+      }
+    }
+  });
+
+  it('le mémo ne reprend aucune phrase ni aucun groupe des questions à produire', () => {
+    const memos = skills.flatMap((s) => s.lesson.memo).join(' ');
+    const banque = [
+      ...OBJETS_PHRASES.map((o) => o.groupe),
+      ...PAIRES.map((p) => p.defini),
+      ...PHRASES_CONJ.map((p) => p.texte),
+      ...PHRASES_ADVERBES.map((p) => p.texte),
+      ...PLURIELS.map((p) => p.pluriel),
+    ];
+    for (const texte of banque) expect(memos, texte).not.toContain(texte);
   });
 });

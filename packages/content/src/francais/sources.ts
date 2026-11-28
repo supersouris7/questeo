@@ -507,6 +507,12 @@ export const SOURCES: readonly Source[] = [
     textDate: '2026',
     consultedOn: '2026-11-27',
   },
+  // Repasse rp-fr-cm1-04 (nature des mots)
+  { ...academie('fonction', 'fonction'), consultedOn: '2026-11-28' },
+  { ...academie('article', 'article'), consultedOn: '2026-11-28' },
+  { ...academie('conjonction', 'conjonction'), consultedOn: '2026-11-28' },
+  { ...academie('adverbe', 'adverbe'), consultedOn: '2026-11-28' },
+  { ...tlfi('demonstratif', 'démonstratif', 'demonstratif'), consultedOn: '2026-11-28' },
   // Lot fr-cm1-11 (lecture)
   academie('ou', 'où'),
   academie('quand', 'quand'),
