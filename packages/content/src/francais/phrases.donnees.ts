@@ -260,9 +260,28 @@ export const TRIPLETS: readonly Triplet[] = [
     verbe: 'Ici, « apportes » perd son « s » : « Apporte ».',
     faute: 'Apportes ton cahier',
   },
+  {
+    declarative: 'Tu chantes cette chanson',
+    interrogative: 'Est-ce que tu chantes cette chanson',
+    imperative: 'Chante cette chanson',
+    sujet: 'tu',
+    verbe: 'Ici, « chantes » perd son « s » : « Chante ».',
+    faute: 'Chantes cette chanson',
+  },
+  {
+    declarative: 'Tu portes ce sac',
+    interrogative: 'Est-ce que tu portes ce sac',
+    imperative: 'Porte ce sac',
+    sujet: 'tu',
+    verbe: 'Ici, « portes » perd son « s » : « Porte ».',
+    faute: 'Portes ce sac',
+  },
 ];
 
-/** Court message dont une seule phrase déclarative contient « tu » (phrases sans signe final). */
+/**
+ * Court message dont une seule phrase déclarative contient « tu » (phrases sans signe final).
+ * Le verbe à transformer est toujours en -er, comme au niveau 4 : il perd son « s ».
+ */
 export interface Message {
   readonly titre: string;
   readonly information: string;
@@ -303,30 +322,30 @@ export const MESSAGES: readonly Message[] = [
     information: 'Le car part tôt',
     question: 'Tu as ton billet',
     ordre: 'Mets tes baskets',
-    declarative: 'Tu prends une gourde',
-    imperative: 'Prends une gourde',
-    faute: 'Prend une gourde',
-    verbe: 'Ici, « prends » garde son « s ».',
+    declarative: 'Tu emportes une gourde',
+    imperative: 'Emporte une gourde',
+    faute: 'Emportes une gourde',
+    verbe: 'Ici, « emportes » perd son « s » : « Emporte ».',
   },
   {
     titre: 'Un mot pour le voisin',
     information: 'Notre chat reste à la maison',
     question: 'Tu es libre lundi',
     ordre: 'Sonne avant d’entrer',
-    declarative: 'Tu remplis sa gamelle',
-    imperative: 'Remplis sa gamelle',
-    faute: 'Rempli sa gamelle',
-    verbe: 'Ici, « remplis » garde son « s ».',
+    declarative: 'Tu donnes ses croquettes',
+    imperative: 'Donne ses croquettes',
+    faute: 'Donnes ses croquettes',
+    verbe: 'Ici, « donnes » perd son « s » : « Donne ».',
   },
   {
     titre: 'Pour l’exposé',
     information: 'L’exposé est vendredi',
     question: 'Tu as des photos',
     ordre: 'Découpe les images',
-    declarative: 'Tu écris le titre',
-    imperative: 'Écris le titre',
-    faute: 'Écri le titre',
-    verbe: 'Ici, « écris » garde son « s ».',
+    declarative: 'Tu recopies le titre',
+    imperative: 'Recopie le titre',
+    faute: 'Recopies le titre',
+    verbe: 'Ici, « recopies » perd son « s » : « Recopie ».',
   },
   {
     titre: 'Dans le jardin',
@@ -343,10 +362,10 @@ export const MESSAGES: readonly Message[] = [
     information: 'La séance commence à cinq heures',
     question: 'Tu viens avec ton ami',
     ordre: 'Mets un pull',
-    declarative: 'Tu attends devant l’école',
-    imperative: 'Attends devant l’école',
-    faute: 'Attend devant l’école',
-    verbe: 'Ici, « attends » garde son « s ».',
+    declarative: 'Tu restes devant l’école',
+    imperative: 'Reste devant l’école',
+    faute: 'Restes devant l’école',
+    verbe: 'Ici, « restes » perd son « s » : « Reste ».',
   },
 ];
 
@@ -561,7 +580,7 @@ export const INTENTIONS = {
 export const SENS = {
   types: {
     type: 'usage',
-    text: 'Reconnaître le type d’une phrase t’aide à comprendre son effet dans un texte.',
+    text: 'Au CM1, tu reconnais les types de phrases et tu comprends leurs effets dans un texte.',
     source: PROGRAMME,
     citation:
       'Identifier les trois types de phrases (déclaratif, interrogatif, impératif ou injonctif) et comprendre leurs effets dans un texte simple',

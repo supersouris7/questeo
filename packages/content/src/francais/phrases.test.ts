@@ -91,11 +91,16 @@ describe('francais cm1 — types et formes de phrases', () => {
       TRIPLETS.flatMap((t) => [t.declarative, t.interrogative, t.imperative]),
     );
     const seen = new Set<string>();
+    const places = new Set<number>();
     each('fcm1-types-phrases', 5, (q) => {
       const found = MESSAGES.filter((m) => lines(q).includes(`${m.declarative}.`));
       expect(found).toHaveLength(1);
       const m = found[0]!;
       seen.add(m.titre);
+      places.add(lines(q).indexOf(`${m.declarative}.`));
+      // Verbe en -er seulement : l’ordre est la phrase sans « Tu » ni le « s » du verbe.
+      expect(m.declarative).toMatch(/^Tu \p{L}+es /u);
+      expect(typed(q, m.declarative.replace(/^Tu (\p{L}+)s /u, '$1 '))).toBe(true);
       for (const l of lines(q)) expect(vues).not.toContain(l.replace(/ ?[.?!]$/, ''));
       // Une seule phrase déclarative contient « tu » : la réponse est unique.
       expect(lines(q).filter((l) => l.endsWith('.') && /\btu\b/i.test(l))).toEqual([`${m.declarative}.`]);
@@ -107,6 +112,7 @@ describe('francais cm1 — types et formes de phrases', () => {
         expect(typed(q, wrong), wrong).toBe(false);
     });
     expect(seen.size).toBe(MESSAGES.length);
+    expect([...places].sort()).toEqual([0, 1, 2, 3]);
     expect(MESSAGES.length).toBeGreaterThanOrEqual(6);
   });
 
@@ -122,7 +128,7 @@ describe('francais cm1 — types et formes de phrases', () => {
       expect(typed(q, `${verb}s ${rest.join(' ')}.`)).toBe(false);
       expect(typed(q, `${order}.`)).toBe(true);
     });
-    expect(seen.size).toBeGreaterThanOrEqual(5);
+    expect(seen.size).toBeGreaterThanOrEqual(8);
   });
 
   it('négative, niveau 5 : une phrase nouvelle sans « ne » à corriger, aucune négation modèle', () => {
@@ -251,9 +257,19 @@ describe('francais cm1 — types et formes de phrases', () => {
     each('fcm1-types-phrases', 3, (q) => {
       const accepted = q.answer.kind === 'text' ? q.answer.accepted : [];
       for (const a of accepted) expect(a).not.toContain('phrase phrase');
+      expect(q.hint).not.toMatch(/déclarati|interrogati|impérati/);
+      if (accepted.includes('interrogative')) expect(why(q, 'interogative')).toContain('deux « r »');
       if (!accepted.includes('impérative')) return;
       injonctives++;
-      for (const a of ['injonctive', 'phrase injonctive', 'une phrase injonctive', 'type injonctif'])
+      for (const a of [
+        'injonctive',
+        'phrase injonctive',
+        'une phrase injonctive',
+        'type injonctif',
+        'la phrase impérative',
+        'phrase de type impératif',
+        'une phrase de type injonctif',
+      ])
         expect(typed(q, a), a).toBe(true);
     });
     expect(injonctives).toBeGreaterThan(0);
@@ -295,9 +311,9 @@ describe('francais cm1 — types et formes de phrases', () => {
       expect(why(q, 'Ecoutes la maîtresse')).toContain('perd son « s »');
     });
     each('fcm1-types-phrases', 5, (q) => {
-      if (!lines(q).includes('Tu attends devant l’école.')) return;
+      if (!lines(q).includes('Tu restes devant l’école.')) return;
       seen.add('ecole');
-      expect(typed(q, "Attends devant l'ecole")).toBe(true);
+      expect(typed(q, "Reste devant l'ecole")).toBe(true);
     });
     expect(seen.size).toBe(2);
   });

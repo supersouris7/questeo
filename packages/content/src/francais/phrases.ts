@@ -47,7 +47,7 @@ const REASON: Record<TypeId, string> = {
 /** Ce qu’on observe pour reconnaître chaque type. */
 const CLUE: Record<TypeId, string> = {
   declarative: 'Elle ne demande rien et n’ordonne rien.',
-  interrogative: 'Elle finit par un point d’interrogation.',
+  interrogative: 'Elle finit par un point d’interrogation « ? ».',
   imperative: 'Le verbe est au début, sans sujet.',
 };
 /** Adjectifs acceptés pour chaque type (« phrase … »), avec ou sans accents ; le premier est affiché. */
@@ -64,8 +64,10 @@ const MASCULINS: Record<TypeId, readonly string[]> = {
 };
 /** Toutes les écritures d’un type : l’adjectif seul, ou dans « une phrase … », « type … ». */
 const typeAnswers = (type: TypeId): string[] => [
-  ...FEMININS[type].flatMap((n) => [n, `phrase ${n}`, `une phrase ${n}`]),
-  ...MASCULINS[type].flatMap((n) => [n, `type ${n}`, `de type ${n}`]),
+  ...FEMININS[type].flatMap((n) => [n, `phrase ${n}`, `une phrase ${n}`, `la phrase ${n}`]),
+  ...MASCULINS[type].flatMap((n) =>
+    ['', 'type ', 'de type ', 'phrase de type ', 'une phrase de type ', 'la phrase de type '].map((s) => `${s}${n}`),
+  ),
 ];
 
 /** Signe de fin de chaque type, avec l'espace avant « ? » et « ! ». */
@@ -123,6 +125,10 @@ function phraseOf(rng: Rng, type: TypeId): string {
   return rng.pick(bank);
 }
 
+/** Faute fréquente (un seul « r ») : refusée, mais expliquée. */
+const UN_SEUL_R = ['interogative', 'phrase interogative', 'une phrase interogative', 'interogatif'];
+const DEUX_R = 'Presque : le mot « interrogative » s’écrit avec deux « r ».';
+
 const whyNotType = (wrong: TypeId, actual: TypeId) => `Ce n’est pas une ${LABEL[wrong]} : ici, ${REASON[actual]}.`;
 const RECOPIE = 'Tu as recopié la phrase. Pour donner un ordre, enlève le sujet.';
 
@@ -143,6 +149,7 @@ function typesDraft(rng: Rng, level: Level): QuestionDraft {
         hint: 'Demande-toi : la phrase informe, questionne ou ordonne ?',
         steps: [
           `Lis la phrase : « ${phrase} »`,
+          `Cherche l’indice. ${CLUE[type]}`,
           `Demande-toi ce qu’elle fait. Ici, ${REASON[type]}.`,
           `Choisis : c’est une **${LABEL[type]}**.`,
         ],
@@ -181,13 +188,16 @@ function typesDraft(rng: Rng, level: Level): QuestionDraft {
       return {
         prompt: `Écris le nom du type de cette phrase : « ${phrase} »`,
         answer: { kind: 'text', accepted: typeAnswers(type) },
-        traps: TYPES.filter((x) => x !== type).flatMap((x) =>
-          typeAnswers(x).map((a) => textTrap(a, whyNotType(x, type))),
-        ),
+        traps: [
+          ...TYPES.filter((x) => x !== type).flatMap((x) =>
+            typeAnswers(x).map((a) => textTrap(a, whyNotType(x, type))),
+          ),
+          ...(type === 'interrogative' ? UN_SEUL_R.map((a) => textTrap(a, DEUX_R)) : []),
+        ],
         hint: 'Que fait cette phrase : informer, questionner ou ordonner ?',
         steps: [
           `Lis la phrase : « ${phrase} »`,
-          `Observe un indice. ${CLUE[type]}`,
+          `Regarde le début et la fin de la phrase. ${CLUE[type]}`,
           `Écris le nom du type : **${FEMININS[type][0]}**.`,
         ],
       };
@@ -218,20 +228,27 @@ function typesDraft(rng: Rng, level: Level): QuestionDraft {
     default: {
       // Le point final ne suffit pas : l’ordre et les phrases déclaratives finissent de la même façon.
       const m = rng.pick(MESSAGES);
+      // Lignes mélangées : la phrase à transformer n’a pas de place fixe.
+      const messageLines = rng.shuffle([`${m.information}.`, `${m.question} ?`, `${m.ordre}.`, `${m.declarative}.`]);
       return {
         prompt:
           'Trouve la phrase déclarative qui contient « tu ». Transforme-la en phrase impérative, avec le même verbe.',
-        figure: document(m.titre, [`${m.information}.`, `${m.question} ?`, `${m.ordre}.`, `${m.declarative}.`]),
+        figure: document(m.titre, messageLines),
         answer: { kind: 'text', accepted: variants(m.imperative, ORDER_SIGNS) },
         traps: [
           ...phraseTraps(m.declarative, ORDER_SIGNS, RECOPIE),
           ...phraseTraps(m.ordre, ORDER_SIGNS, 'Cette phrase donne déjà un ordre. Cherche la phrase avec « tu ».'),
           ...phraseTraps(m.question, QUESTION_SIGNS, 'Cette phrase pose une question : elle n’est pas déclarative.'),
+          ...phraseTraps(
+            m.information,
+            ORDER_SIGNS,
+            'Cette phrase informe, mais elle ne contient pas « tu ». Cherche l’autre.',
+          ),
           ...phraseTraps(m.faute, ORDER_SIGNS, m.verbe),
         ],
         hint: 'Le point ne suffit pas : demande-toi ce que fait chaque phrase.',
         steps: [
-          `Écarte la question « ${m.question} ? » et l’ordre « ${m.ordre}. »`,
+          `Écarte la question (« ? ») et l’ordre (verbe au début, sans sujet).`,
           `Garde la phrase qui informe avec « tu » : « ${m.declarative}. »`,
           `Enlève « tu » et commence par le verbe. ${m.verbe}`,
           `Écris l’ordre : **${m.imperative}.**`,
