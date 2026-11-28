@@ -253,6 +253,7 @@ describe('anglais cm1 : le temps qui passe', () => {
       const given = blanks.map((b) => (b.mode === 'text' ? (b.accepted[0] ?? '') : ''));
       expect(given).toEqual(parts.slice(1).map((p) => (/^ \d/.test(p) ? 'on' : 'in')));
       expect(q.steps.at(-1)).toBe(`Réponds : **${given[0] ?? ''}**, puis **${given[1] ?? ''}**.`);
+      expect(q.steps[0]).toContain('devant un mois, mets « in ». Devant une date, mets « on »');
       orders.add(given.join(' '));
     }
     expect([...orders].sort()).toEqual(['in on', 'on in']);
@@ -266,7 +267,7 @@ describe('anglais cm1 : le temps qui passe', () => {
         expect(right('acm1-date', level, seed, `${q.answer.accepted[0] ?? ''}.`)).toBe(true);
         for (const t of q.traps)
           if ('text' in t) {
-            const bare = t.text.replace(/\.$/, '');
+            const bare = t.text.replace(/ ?[.!]$/, '');
             for (const text of [bare, `${bare}.`]) expect(check(q, { kind: 'text', text }).why, text).toBe(t.why);
           }
       }
@@ -323,12 +324,14 @@ describe('anglais cm1 : le temps qui passe', () => {
         if (q.answer.kind !== 'text') continue;
         expect(right('acm1-saisons', level, seed, `${q.answer.accepted[0] ?? ''}.`)).toBe(true);
         for (const t of q.traps)
-          if ('text' in t) expect(check(q, { kind: 'text', text: `${t.text.replace(/\.$/, '')}.` }).why).toBe(t.why);
+          if ('text' in t)
+            expect(check(q, { kind: 'text', text: `${t.text.replace(/ ?[.!]$/, '')}.` }).why).toBe(t.why);
       }
   });
 
-  it('saisons : 4 saisons à ranger depuis « spring », et au moins 6 questions au niveau 1', () => {
+  it('saisons : 4 saisons à ranger, départ variable, et au moins 6 questions au niveau 1', () => {
     const first = new Set<string>();
+    const starts = new Set<string>();
     let ordered = 0;
     for (let seed = 1; seed <= 200; seed++) {
       const one = generate('acm1-saisons', 1, seed);
@@ -337,9 +340,14 @@ describe('anglais cm1 : le temps qui passe', () => {
       if (q.answer.kind !== 'order') continue;
       ordered++;
       expect(q.answer.items).toHaveLength(4);
-      expect(q.hint).toContain('« spring »');
+      const right = q.answer.correct.map((i) => (q.answer.kind === 'order' ? q.answer.items[i] : ''));
+      const from = SEASONS.findIndex((s) => s.en === right[0]);
+      expect(right).toEqual(SEASONS.map((_, i) => SEASONS[(from + i) % 4]?.en));
+      expect(q.hint).toContain(`« ${right[0] ?? ''} »`);
+      starts.add(right[0] ?? '');
     }
     expect(ordered).toBeGreaterThan(0);
+    expect(starts.size).toBe(4);
     expect(first.size).toBeGreaterThanOrEqual(6);
   });
 
@@ -381,6 +389,100 @@ describe('anglais cm1 : le temps qui passe', () => {
         `It's ${other} in ${town} today`,
       ])
         expect(right('acm1-meteo', 5, seed, text), text).toBe(true);
+    }
+  });
+
+  it('météo : le mémo enseigne chaque mot interrogé avec son sens', () => {
+    const memo = skills.find((s) => s.id === 'acm1-meteo')?.lesson.memo.join(' ') ?? '';
+    for (const w of WEATHER) {
+      expect(memo, w.en).toContain(w.en);
+      expect(memo, w.en).toContain(w.fr);
+    }
+    expect(memo).toContain('il y a du soleil');
+  });
+
+  it('météo, niveau 4 : « il y a du soleil » (et non « il fait beau ») pour sunny', () => {
+    let sunny = 0;
+    for (let seed = 1; seed <= 100; seed++) {
+      const q = generate('acm1-meteo', 4, seed);
+      expect(q.prompt).not.toContain('il fait beau');
+      expect(q.prompt).toContain('Commence par « It’s »');
+      if (!q.prompt.includes('« il y a du soleil »')) continue;
+      sunny++;
+      expect(right('acm1-meteo', 4, seed, "It's sunny.")).toBe(true);
+    }
+    expect(sunny).toBeGreaterThan(0);
+  });
+
+  it('météo, niveau 5 : « today » et la ville combinés à toutes les places, « The weather is » accepté', () => {
+    for (let seed = 1; seed <= 100; seed++) {
+      const q = generate('acm1-meteo', 5, seed);
+      if (q.figure?.kind !== 'document' || q.answer.kind !== 'text') throw new Error('document attendu');
+      const word = (q.answer.accepted[0] ?? '').split(' ')[1] ?? '';
+      const line = q.figure.lines.find((l) => l.includes(` ${word}`)) ?? '';
+      const town = /^In (\w+),/.exec(line)?.[1] ?? '';
+      for (const text of [
+        `Today it's ${word} in ${town}`,
+        `Today, in ${town}, it's ${word}.`,
+        `In ${town} today it's ${word}`,
+        `In ${town} today, it is ${word}!`,
+        `In ${town}, today, it's ${word}`,
+        `In ${town}, it's ${word} today.`,
+        `It's ${word} today in ${town}`,
+        `The weather is ${word}.`,
+        `The weather today is ${word}`,
+        `The weather in ${town} is ${word}`,
+        `Today the weather in ${town} is ${word}`,
+        `The weather in ${town} today is ${word}`,
+      ])
+        expect(right('acm1-meteo', 5, seed, text), text).toBe(true);
+      const elsewhere = ['London', 'Glasgow', 'Cardiff', 'Belfast'].find((t) => t !== town) ?? '';
+      expect(right('acm1-meteo', 5, seed, `It's ${word} in ${elsewhere}`)).toBe(false);
+    }
+  });
+
+  it('saisie : « ! » et point acceptés (saisons, météo niveau 3, date), ordinal sans « the »', () => {
+    for (const [id, level] of [
+      ['acm1-saisons', 3],
+      ['acm1-saisons', 4],
+      ['acm1-meteo', 3],
+      ['acm1-date', 3],
+    ] as const)
+      for (let seed = 1; seed <= 60; seed++) {
+        const q = generate(id, level, seed);
+        if (q.answer.kind !== 'text') continue;
+        for (const end of ['.', '!'])
+          expect(right(id, level, seed, `${q.answer.accepted[0] ?? ''}${end}`), q.prompt).toBe(true);
+      }
+    let thirtieth = 0;
+    for (let seed = 1; seed <= 300; seed++) {
+      const q = generate('acm1-date', 3, seed);
+      if (q.answer.kind !== 'text' || q.answer.accepted[0] !== '30 July') continue;
+      thirtieth++;
+      expect(right('acm1-date', 3, seed, 'thirtieth of July')).toBe(true);
+    }
+    expect(thirtieth).toBeGreaterThan(0);
+  });
+
+  it('date : aucun distracteur ni piège avec une date impossible', () => {
+    for (const level of [1, 3] as const)
+      for (let seed = 1; seed <= 300; seed++) {
+        const q = generate('acm1-date', level, seed);
+        const texts =
+          q.answer.kind === 'choice' ? q.answer.options : q.traps.flatMap((t) => ('text' in t ? [t.text] : []));
+        for (const text of texts)
+          expect(text).not.toMatch(/^(29|30|31) (February|février)|^31 (April|June|September|November)/);
+      }
+  });
+
+  it('saisons : la liste est affichée au niveau 4, les mots non enseignés sont traduits au niveau 5', () => {
+    for (let seed = 1; seed <= 100; seed++) {
+      const four = generate('acm1-saisons', 4, seed);
+      if (four.steps[0]?.startsWith('Repère')) expect(four.steps[0]).toContain('spring, summer, autumn, winter');
+      const five = generate('acm1-saisons', 5, seed);
+      const text = five.figure?.kind === 'document' ? five.figure.lines.join(' ') : '';
+      for (const word of ['flowers', 'leaves', 'ground'])
+        if (text.toLowerCase().includes(word)) expect(five.prompt).toContain(`« ${word} » =`);
     }
   });
 });

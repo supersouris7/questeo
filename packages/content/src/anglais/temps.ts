@@ -1,7 +1,7 @@
 import type { Chapter, QuestionDraft, Skill } from '../types.ts';
 import type { Rng } from '../rng.ts';
 import { choice } from '../build.ts';
-import { dottedTraps, type TextTrap } from './outils-5e.ts';
+import type { TextTrap } from './outils-5e.ts';
 import { COLOURS, DATES, DAYS, MONTHS, SEASONS, WEATHER, type SourcedDate, type Word } from './temps-faits.ts';
 
 /**
@@ -40,6 +40,12 @@ const dotted = (forms: readonly string[]): string[] => [...new Set(forms)].flatM
 /** Une saison se traduit avec ou sans article : « spring », « the spring » (et « the fall »). */
 const withThe = (w: Word): string[] => accepted(w).flatMap((s) => [s, `the ${s}`]);
 
+/** Saisies acceptées avec ou sans point ou point d’exclamation (collé ou précédé d’une espace). */
+const exclaimed = (forms: readonly string[]): string[] =>
+  [...new Set(forms)].flatMap((f) => [f, `${f}.`, `${f}!`, `${f} !`]);
+const exclaimedTraps = (traps: readonly TextTrap[]) =>
+  traps.flatMap((t) => exclaimed([t.text]).map((text) => ({ text, why: t.why })));
+
 // ——— Questions communes au vocabulaire ———
 
 /** Explications propres à un chapitre ; sans elles, les questions communes gardent leurs explications d’origine. */
@@ -48,6 +54,8 @@ export interface Say {
   readonly understand: (w: Word) => string[];
   readonly match: (rows: readonly Word[]) => string[];
   readonly write: (w: Word) => string[];
+  /** Indice du niveau 2, quand le chapitre en a un plus précis. */
+  readonly hint?: string;
 }
 
 /** Niveau 1 : le mot anglais parmi 3. */
@@ -78,7 +86,7 @@ export function understand(
   rng: Rng,
   list: readonly Word[],
   kind: string,
-  say?: Pick<Say, 'understand' | 'match'>,
+  say?: Pick<Say, 'understand' | 'match' | 'hint'>,
 ): QuestionDraft {
   if (rng.int(0, 1) === 0) {
     const w = rng.pick(list);
@@ -91,14 +99,14 @@ export function understand(
       prompt: `Que veut dire « ${w.en} » (${kind}) ?`,
       answer,
       traps,
-      hint: 'Dis le mot à voix haute. Dans quelle chanson ou quelle phrase l’as-tu entendu ?',
+      hint: say?.hint ?? 'Dis le mot à voix haute. Dans quelle chanson ou quelle phrase l’as-tu entendu ?',
       steps: say?.understand(w) ?? [`On lit le mot anglais « ${w.en} ».`, `Il veut dire **${w.fr}**.`],
     };
   }
   return pairs(rng, list, 3, say);
 }
 
-export function pairs(rng: Rng, list: readonly Word[], n: number, say?: Pick<Say, 'match'>): QuestionDraft {
+export function pairs(rng: Rng, list: readonly Word[], n: number, say?: Pick<Say, 'match' | 'hint'>): QuestionDraft {
   const rows = some(rng, list, n);
   const left = rows.map((w) => w.en);
   const right = shuffledOther(
@@ -108,7 +116,7 @@ export function pairs(rng: Rng, list: readonly Word[], n: number, say?: Pick<Say
   return {
     prompt: `Associe chaque mot anglais à son sens : ${left.join(', ')}.`,
     answer: { kind: 'match', left, right, pairs: rows.map((w) => right.indexOf(w.fr)) },
-    hint: 'Commence par le mot que tu connais le mieux. Les autres seront plus faciles.',
+    hint: say?.hint ?? 'Commence par le mot que tu connais le mieux. Les autres seront plus faciles.',
     steps: say?.match(rows) ?? [
       'On relie chaque mot anglais à son sens.',
       ...rows.map((w) => `${w.en} → ${w.fr}`),
@@ -179,6 +187,11 @@ const SEASONS_SAY: Say = {
     `Prends la même place dans : ${SEASONS_FR}.`,
     `Choisis **${w.fr}**.`,
   ],
+  match: (rows) => [
+    `Regarde l’ordre en anglais : ${SEASONS_EN}.`,
+    `Associe les mêmes places en français : ${SEASONS_FR}.`,
+    `Réponds : **${rows.map((w) => `${w.en} = ${w.fr}`).join(' ; ')}**.`,
+  ],
   write: (w) => [
     `Lis le mot français : « ${w.fr} ».`,
     `Retrouve sa place dans : ${SEASONS_FR}.`,
@@ -189,7 +202,7 @@ const SEASONS_SAY: Say = {
 
 /** Temps dit en français : une phrase naturelle pour chaque mot de la météo. */
 const SAID_FR: Readonly<Record<string, string>> = {
-  sunny: 'il fait beau',
+  sunny: 'il y a du soleil',
   rainy: 'il pleut',
   cloudy: 'il y a des nuages',
   windy: 'il y a du vent',
@@ -200,13 +213,14 @@ const SAID_FR: Readonly<Record<string, string>> = {
   cold: 'il fait froid',
 };
 const said = (w: Word): string => SAID_FR[w.en] ?? w.fr;
-/** Météo : le repère est une phrase d’exemple avec « it’s ». */
-const example = (w: Word) => `Retrouve l’exemple « It’s ${w.en} » : ${said(w)}.`;
+/** Météo : la bulle affiche elle-même la phrase d’exemple avec « it’s ». */
+const example = (w: Word) => `Lis l’exemple « It’s ${w.en} » : ${said(w)}.`;
 const WEATHER_SAY: Say = {
   ...guided('', LETTERS),
   choose: (w) => [`Lis le mot français : « ${w.fr} ».`, example(w), `Choisis **${w.en}**.`],
   understand: (w) => [`Lis le mot anglais : « ${w.en} ».`, example(w), `Choisis **${w.fr}**.`],
   write: (w) => [`Lis le mot français : « ${w.fr} ».`, example(w), LETTERS, `Écris **${w.en}**.`],
+  hint: 'Pense aux mots du mémo. Élimine d’abord les sens que tu connais déjà.',
 };
 
 /** Mot suivant ou précédent dans un cycle (jours, mois, saisons). */
@@ -215,6 +229,7 @@ function neighbour(
   list: readonly Word[],
   unit: string,
   forms: (w: Word) => string[] = accepted,
+  shown?: string,
 ): QuestionDraft {
   const i = rng.int(0, list.length - 1);
   const next = rng.int(0, 1) === 0;
@@ -235,7 +250,9 @@ function neighbour(
     ],
     hint: 'Récite la liste dans l’ordre, du début, et arrête-toi sur le mot donné.',
     steps: [
-      `Repère « ${w.en} » dans la liste : il veut dire « ${w.fr} ».`,
+      shown
+        ? `Repère « ${w.en} » (${w.fr}) dans : ${shown}.`
+        : `Repère « ${w.en} » dans la liste : il veut dire « ${w.fr} ».`,
       next
         ? 'Avance d’un mot. Après le dernier, reviens au premier.'
         : 'Recule d’un mot. Avant le premier, reprends le dernier.',
@@ -244,16 +261,19 @@ function neighbour(
   };
 }
 
-/** Remettre des mots d'un cycle dans l'ordre (suite continue, sans passer par la fin de liste). */
+/**
+ * Remettre des mots d'un cycle dans l'ordre : suite continue, sans passer par la fin de liste, sauf si `cue.cycle`
+ * (la suite peut alors partir de n'importe quel mot et reprendre au début).
+ */
 function ordering(
   rng: Rng,
   list: readonly Word[],
   n: number,
   unit: string,
-  cue?: { readonly hint: (first: string) => string; readonly step: string },
+  cue?: { readonly hint: (first: string) => string; readonly step: string; readonly cycle: boolean },
 ): QuestionDraft {
-  const start = rng.int(0, list.length - n);
-  const right = list.slice(start, start + n).map((w) => w.en);
+  const start = rng.int(0, cue?.cycle ? list.length - 1 : list.length - n);
+  const right = Array.from({ length: n }, (_, i) => at(list, (start + i) % list.length).en);
   const items = shuffledOther(rng, right);
   return {
     prompt: `Remets ${unit} dans l’ordre, à partir de « ${at(right, 0)} » : ${items.join(', ')}.`,
@@ -568,17 +588,28 @@ const months: Skill = {
 };
 
 // ——— 4. Les saisons ———
-/** Indices du niveau 5 : mots simples (météo, école, loisirs, couleurs, nourriture), une seule saison possible. */
-const CLUES: readonly { readonly season: string; readonly en: string; readonly fr: string }[] = [
+/**
+ * Indices du niveau 5 : mots simples (météo, école, loisirs, couleurs, nourriture), une seule saison possible.
+ * `help` traduit dans l’énoncé les mots que la notion n’enseigne pas.
+ */
+interface Clue {
+  readonly season: string;
+  readonly en: string;
+  readonly fr: string;
+  readonly help?: string;
+}
+const CLUES: readonly Clue[] = [
   {
     season: 'spring',
     en: 'New flowers open. The trees are green again.',
     fr: 'de nouvelles fleurs s’ouvrent, les arbres redeviennent verts',
+    help: '« flowers » = fleurs',
   },
   {
     season: 'spring',
     en: 'The cold days end. We see new flowers.',
     fr: 'les jours froids se terminent, on voit de nouvelles fleurs',
+    help: '« flowers » = fleurs',
   },
   { season: 'summer', en: 'It’s hot and sunny. We swim in the sea.', fr: 'il fait chaud et beau, on nage dans la mer' },
   {
@@ -590,11 +621,13 @@ const CLUES: readonly { readonly season: string; readonly en: string; readonly f
     season: 'autumn',
     en: 'The green leaves are now brown and orange.',
     fr: 'les feuilles vertes sont devenues marron et orange',
+    help: '« leaves » = feuilles',
   },
   {
     season: 'autumn',
     en: 'It’s windy. Red and brown leaves are on the ground.',
     fr: 'il y a du vent, des feuilles rouges et marron sont par terre',
+    help: '« leaves » = feuilles, « ground » = sol',
   },
   {
     season: 'winter',
@@ -613,15 +646,16 @@ const season = (en: string): Word => {
   return w;
 };
 
-/** Saisie d’une saison : point final accepté, erreur typique reconnue avec ou sans point. */
-function seasonText(q: QuestionDraft): QuestionDraft {
+/** Saisie d’un mot : point ou point d’exclamation accepté, erreur typique reconnue de la même façon. */
+function punctuated(q: QuestionDraft): QuestionDraft {
   if (q.answer.kind !== 'text') return q;
   const traps = (q.traps ?? []).filter((t): t is TextTrap => 'text' in t);
-  return { ...q, answer: { kind: 'text', accepted: dotted(q.answer.accepted) }, traps: dottedTraps(traps) };
+  return { ...q, answer: { kind: 'text', accepted: exclaimed(q.answer.accepted) }, traps: exclaimedTraps(traps) };
 }
 const SEASONS_ORDER = {
   hint: (first: string) => `Récite les saisons en commençant par « ${first} ».`,
-  step: `Suis l’ordre de l’année : ${SEASONS_FR}.`,
+  step: `Suis l’ordre : ${SEASONS_FR}. Après le dernier, reprends le premier.`,
+  cycle: true,
 };
 
 /** Niveau 1, dans l’autre sens : choisir parmi 3 le sens d’un mot anglais. */
@@ -670,20 +704,20 @@ const seasons: Skill = {
         rng,
         SEASONS,
         'une saison',
-        'Pense au temps qu’il fait. Que fais-tu à ce moment de l’année ?',
+        'Récite les saisons en français, puis en anglais, dans le même ordre.',
         SEASONS_SAY,
       );
     }
     if (level === 2) return understand(rng, SEASONS, 'une saison', SEASONS_SAY);
     if (level === 3)
       return rng.int(0, 1) === 0
-        ? seasonText(write(rng, SEASONS, 'une saison', SEASONS_SAY, withThe))
+        ? punctuated(write(rng, SEASONS, 'une saison', SEASONS_SAY, withThe))
         : ordering(rng, SEASONS, 4, 'ces saisons', SEASONS_ORDER);
     if (level === 4) {
-      if (rng.int(0, 1) === 0) return seasonText(neighbour(rng, SEASONS, 'la saison', withThe));
+      if (rng.int(0, 1) === 0) return punctuated(neighbour(rng, SEASONS, 'la saison', withThe, SEASONS_EN));
       const w = rng.pick(SEASONS);
       const fr = { spring: 'au printemps', summer: 'en été', autumn: 'en automne', winter: 'en hiver' }[w.en];
-      return seasonText({
+      return punctuated({
         prompt: `Écris en anglais, avec le petit mot devant la saison : « ${fr ?? ''} ».`,
         answer: { kind: 'text', accepted: accepted(w).flatMap((s) => [`in ${s}`, `in the ${s}`]) },
         traps: [
@@ -691,18 +725,18 @@ const seasons: Skill = {
           { text: `at ${w.en}`, why: '« at » va avec une heure. Pour une saison, on met « in ».' },
           { text: w.en, why: 'Il manque le petit mot devant la saison.' },
         ],
-        hint: 'Un petit mot de deux lettres, puis la saison.',
+        hint: 'Relis le mémo : quel petit mot va devant une saison ?',
         steps: [
           `Cherche la saison en anglais : « ${w.en} ».`,
-          'Place « in » devant la saison.',
+          'Place « in » devant : c’est le petit mot des saisons.',
           `Réponds : **in ${w.en}**.`,
         ],
       });
     }
     const first = rng.pick(CLUES);
     const good = season(first.season);
-    return seasonText({
-      prompt: 'Lis le texte. De quelle saison parle-t-il ? Écris-la en anglais.',
+    return punctuated({
+      prompt: `Lis le texte. De quelle saison parle-t-il ? Écris-la en anglais.${first.help ? ` Aide : ${first.help}.` : ''}`,
       figure: {
         kind: 'document',
         title: 'Which season?',
@@ -747,6 +781,7 @@ const dateAccepted = ({ day, month }: SourcedDate): string[] => {
   return [
     `${day} ${month}`,
     `the ${w} of ${month}`,
+    `${w} of ${month}`,
     `${month} the ${w}`,
     `${month} ${w}`,
     `${o} ${month}`,
@@ -763,7 +798,17 @@ const withOn = (forms: readonly string[]): string[] => forms.flatMap((f) => [f, 
 /** Date avec son jour de la semaine : « Friday 5 July », « Friday, July 5th ». */
 const withDay = (weekday: string, forms: readonly string[]): string[] =>
   forms.flatMap((f) => [`${weekday} ${f}`, `${weekday}, ${f}`]);
-const otherMonth = (rng: Rng, month: string): string => rng.pick(MONTHS.filter((m) => m.en !== month)).en;
+/** Mois de moins de 31 jours (février : 28, pour que la date existe chaque année). */
+const SHORT_MONTHS: Readonly<Record<string, number>> = {
+  February: 28,
+  April: 30,
+  June: 30,
+  September: 30,
+  November: 30,
+};
+/** Un autre mois où le même numéro de jour existe : un distracteur n’est jamais une date impossible. */
+const otherMonth = (rng: Rng, { day, month }: SourcedDate): string =>
+  rng.pick(MONTHS.filter((m) => m.en !== month && day <= (SHORT_MONTHS[m.en] ?? 31))).en;
 
 const date: Skill = {
   id: 'acm1-date',
@@ -774,7 +819,7 @@ const date: Skill = {
     memo: [
       'Écris le numéro, puis le mois : 2 August (le 2 août).',
       'Devant un jour ou une date, mets **on** : on Friday 2 August.',
-      'Devant un mois seul, mets **in** : in August.',
+      'Devant un mois seul ou une saison, mets **in** : in August.',
     ],
     source: source('Dates : British Council, « Prepositions of time » ; programme d’anglais du collège (ordinaux).'),
     sources: [
@@ -797,7 +842,7 @@ const date: Skill = {
   generate: (rng, level): QuestionDraft => {
     const d = rng.pick(DATES);
     if (level === 1) {
-      const m = otherMonth(rng, d.month);
+      const m = otherMonth(rng, d);
       const { answer, traps } = choice(rng, dateEn(d), [
         { label: `${d.day} ${m}`, why: `« ${m} » veut dire « ${frMonth(m)} » : ce n’est pas le bon mois.` },
         {
@@ -871,17 +916,18 @@ const date: Skill = {
           },
           hint: 'Un trou après l’autre : y a-t-il un numéro de jour, ou seulement un mois ?',
           steps: [
-            `Lis le premier trou : « ${one.word} » est ${one.what}.`,
-            `Lis le second trou : « ${two.word} » est ${two.what}.`,
+            'Retiens la règle : devant un mois, mets « in ». Devant une date, mets « on ».',
+            `Premier trou : lis « ${one.word} ». C’est ${one.what}.`,
+            `Second trou : lis « ${two.word} ». C’est ${two.what}.`,
             `Réponds : **${one.good}**, puis **${two.good}**.`,
           ],
         };
       }
-      const m = otherMonth(rng, d.month);
+      const m = otherMonth(rng, d);
       return {
         prompt: `Écris en anglais la date : « le ${dateFr(d)} ».`,
-        answer: { kind: 'text', accepted: dotted(withOn(dateAccepted(d))) },
-        traps: dottedTraps([
+        answer: { kind: 'text', accepted: exclaimed(withOn(dateAccepted(d))) },
+        traps: exclaimedTraps([
           { text: `${d.day} ${frMonth(d.month)}`, why: `Écris le mois en anglais : « ${d.month} ».` },
           { text: `${d.day} ${m}`, why: `« ${m} » veut dire « ${frMonth(m)} ».` },
           { text: d.month, why: 'Il manque le numéro du jour.' },
@@ -900,8 +946,8 @@ const date: Skill = {
       const good = `on ${day.en} ${dateEn(d)}`;
       return {
         prompt: `Écris en anglais, avec le petit mot qui va devant : « le ${day.fr} ${dateFr(d)} ».`,
-        answer: { kind: 'text', accepted: dotted(withDay(day.en, dateAccepted(d)).map((f) => `on ${f}`)) },
-        traps: dottedTraps([
+        answer: { kind: 'text', accepted: exclaimed(withDay(day.en, dateAccepted(d)).map((f) => `on ${f}`)) },
+        traps: exclaimedTraps([
           { text: `${day.en} ${dateEn(d)}`, why: 'Il manque le petit mot qui va devant une date.' },
           { text: `in ${day.en} ${dateEn(d)}`, why: '« in » va avec un mois seul. Devant une date, on met « on ».' },
           { text: `on ${day.en} ${d.day} ${frMonth(d.month)}`, why: `Écris le mois en anglais : « ${d.month} ».` },
@@ -930,9 +976,9 @@ const date: Skill = {
       },
       answer: {
         kind: 'text',
-        accepted: dotted(withOn([...dateAccepted(good), ...withDay(asked.en, dateAccepted(good))])),
+        accepted: exclaimed(withOn([...dateAccepted(good), ...withDay(asked.en, dateAccepted(good))])),
       },
-      traps: dottedTraps([
+      traps: exclaimedTraps([
         { text: `${start} ${month}`, why: `C’est la date de « Monday ». Compte les jours jusqu’à « ${asked.en} ».` },
         { text: `${good.day + 1} ${month}`, why: 'Tu as compté un jour de trop.' },
         { text: asked.en, why: 'On demande la date : un numéro et un mois.' },
@@ -949,36 +995,53 @@ const date: Skill = {
 };
 
 // ——— 6. La météo ———
-/** Phrases justes pour dire un temps : « It’s sunny », « It is sunny today », « It’s a sunny day today ». */
-const weatherSentences = (w: Word): string[] =>
+/**
+ * Début d’une phrase juste pour dire un temps : « It’s sunny », « It is a sunny day », « The weather is sunny » (et
+ * « The weather today is … », « The weather in London is … »). Pas de « a … day » ni de « The weather is » avec
+ * « raining » ou « snowing ». La première forme est la réponse montrée.
+ */
+const weatherCores = (w: Word): string[] =>
   accepted(w).flatMap((f) =>
-    ['It’s', 'It is'].flatMap((it) => [
-      `${it} ${f}`,
-      `${it} ${f} today`,
-      // « It’s a sunny day » est juste aussi ; pas avec « raining » ou « snowing ».
-      ...(f.endsWith('ing') ? [] : [`${it} a ${f} day`, `${it} a ${f} day today`]),
-    ]),
+    ['It’s', 'It is'].flatMap((it) => [`${it} ${f}`, ...(f.endsWith('ing') ? [] : [`${it} a ${f} day`])]),
   );
-/** « It’s … » placé après un complément : le « it » perd sa majuscule. */
-const inner = (sentence: string) => sentence.replace(/^It/, 'it');
-/** « today » en tête de phrase, sans le répéter à la fin. */
-const todayFirst = (sentences: readonly string[]): string[] =>
-  sentences.filter((f) => !f.endsWith('today')).flatMap((f) => [`Today ${inner(f)}`, `Today, ${inner(f)}`]);
-/** La ville en tête ou en fin de phrase, avec ou sans virgule, avec ou sans « today ». */
-const inTown = (sentences: readonly string[], town: string): string[] =>
-  sentences.flatMap((f) => [
-    `${f} in ${town}`,
-    `In ${town}, ${inner(f)}`,
-    `In ${town} ${inner(f)}`,
-    ...(f.endsWith('today')
-      ? []
-      : [`${f} in ${town} today`, `Today in ${town}, ${inner(f)}`, `Today in ${town} ${inner(f)}`]),
-  ]);
-/** Saisies acceptées avec ou sans point ou point d’exclamation (collé ou précédé d’une espace). */
-const exclaimed = (forms: readonly string[]): string[] =>
-  [...new Set(forms)].flatMap((f) => [f, `${f}.`, `${f}!`, `${f} !`]);
-const exclaimedTraps = (traps: readonly TextTrap[]) =>
-  traps.flatMap((t) => exclaimed([t.text]).map((text) => ({ text, why: t.why })));
+/** Compléments dans chaque ordre possible, du plus court au plus long (deux au plus). */
+const arrangements = (parts: readonly string[]): string[][] => [
+  [],
+  ...parts.flatMap((a) => [[a], ...parts.filter((b) => b !== a).map((b) => [a, b])]),
+];
+const capital = (text: string) => text.slice(0, 1).toUpperCase() + text.slice(1);
+/** Chaque complément (« today », la ville) en tête, avec ou sans virgule, ou en fin de phrase. */
+const placed = (core: string, parts: readonly string[]): string[] =>
+  arrangements(parts).flatMap((head) =>
+    arrangements(parts.filter((p) => !head.includes(p))).flatMap((tail) => {
+      const end = tail.map((p) => ` ${p}`).join('');
+      if (head.length === 0) return [`${core}${end}`];
+      const inner = core.replace(/^(It|The)/, (x) => x.toLowerCase());
+      return [head.join(' '), head.join(', ')].flatMap((start) =>
+        [' ', ', '].map((comma) => `${capital(start)}${comma}${inner}${end}`),
+      );
+    }),
+  );
+/** Toutes les phrases justes, avec « today » et, s’il y en a une, la ville. */
+const weatherAnswers = (w: Word, town?: string): string[] => {
+  const place = town ? [`in ${town}`] : [];
+  const all = ['today', ...place];
+  const plain = accepted(w).filter((f) => !f.endsWith('ing'));
+  return [
+    ...weatherCores(w).flatMap((c) => placed(c, all)),
+    ...plain.flatMap((f) => [
+      ...placed(`The weather is ${f}`, all),
+      ...placed(`The weather today is ${f}`, place),
+      ...(town
+        ? [
+            ...placed(`The weather in ${town} is ${f}`, ['today']),
+            `The weather in ${town} today is ${f}`,
+            `The weather today in ${town} is ${f}`,
+          ]
+        : []),
+    ]),
+  ];
+};
 const ITS = '« its » veut dire « son » ou « sa ». Il faut « it’s », avec une apostrophe.';
 /** Temps du niveau 5, dit en français dans la question. */
 const CONDITIONS: Readonly<Record<string, string>> = {
@@ -1002,9 +1065,9 @@ const weather: Skill = {
   version: 2,
   lesson: {
     memo: [
-      'Pour demander « quel temps fait-il aujourd’hui », dis : What’s the weather like today?',
-      'Réponds avec **it’s** et un mot de la météo : It’s sunny (il fait beau).',
+      'À « What’s the weather like » (quel temps fait-il), réponds avec **it’s** : It’s sunny (ensoleillé, il y a du soleil).',
       'Apprends : rainy (pluvieux), cloudy (nuageux), windy (venteux), snowy (neigeux).',
+      'Retiens aussi : stormy (orageux), foggy (avec du brouillard), hot (chaud), cold (froid).',
     ],
     source: source('Météo : British Council, « Weather flashcards » et « The weather where I live ».'),
     sources: [
@@ -1018,9 +1081,9 @@ const weather: Skill = {
   sens: [
     {
       type: 'usage',
-      text: "Tu peux répondre en anglais à la question : « What's the weather like today where you are? »",
-      source: 'bck-weather-your-turn',
-      citation: "What's the weather like today where you are?",
+      text: "Tu comprends un enfant qui écrit du Brésil : « Today it's hot and sunny in Brazil ».",
+      source: 'bck-weather-live',
+      citation: "Today it's hot and sunny in Brazil.",
     },
   ],
   generate: (rng, level): QuestionDraft => {
@@ -1030,7 +1093,7 @@ const weather: Skill = {
         // Les 5 premiers mots, puis « hot » et « cold » : assez de questions différentes.
         [...WEATHER.slice(0, 5), ...WEATHER.slice(-2)],
         'la météo',
-        'Imagine le ciel ce jour-là. Quel mot as-tu entendu en classe ?',
+        'Pense aux mots du mémo. Élimine ceux dont tu connais déjà le sens.',
         WEATHER_SAY,
       );
     if (level === 2) {
@@ -1056,13 +1119,13 @@ const weather: Skill = {
       }
       return understand(rng, WEATHER, 'la météo', WEATHER_SAY);
     }
-    if (level === 3) return write(rng, WEATHER, 'la météo', WEATHER_SAY);
+    if (level === 3) return punctuated(write(rng, WEATHER, 'la météo', WEATHER_SAY));
     if (level === 4) {
       const w = rng.pick(WEATHER);
       const other = at(others(rng, WEATHER, w, 1), 0);
       return {
-        prompt: `Réponds à « What’s the weather like? » par une phrase avec « it’s » : « ${said(w)} ».`,
-        answer: { kind: 'text', accepted: exclaimed([...weatherSentences(w), ...todayFirst(weatherSentences(w))]) },
+        prompt: `Réponds à « What’s the weather like? » (quel temps fait-il ?) : « ${said(w)} ». Commence par « It’s ».`,
+        answer: { kind: 'text', accepted: exclaimed(weatherAnswers(w)) },
         traps: exclaimedTraps([
           { text: w.en, why: 'Le mot est bon. Fais une phrase : commence par « It’s ».' },
           { text: `Its ${w.en}`, why: ITS },
@@ -1085,19 +1148,15 @@ const weather: Skill = {
     const good = weatherWord(wanted);
     const condition = CONDITIONS[asked] ?? '';
     const day = rng.pick(DAYS).en;
-    const sentences = weatherSentences(good);
     return {
-      prompt: `Lis la météo des villes. Dans la ville où ${condition}, quel autre temps fait-il ? Réponds par une phrase en anglais.`,
+      prompt: `Lis la météo des villes. Dans la ville où ${condition}, quel autre temps fait-il ? Réponds en anglais : commence par « It’s ».`,
       figure: {
         kind: 'document',
         title: `Weather on ${day}`,
         lines: rows.map(({ town, pair }) => `In ${town}, it’s ${pair.join(' and ')}.`),
         credit: 'Météo imaginaire, écrite pour l’exercice.',
       },
-      answer: {
-        kind: 'text',
-        accepted: exclaimed([...sentences, ...todayFirst(sentences), ...inTown(sentences, row.town)]),
-      },
+      answer: { kind: 'text', accepted: exclaimed(weatherAnswers(good, row.town)) },
       traps: exclaimedTraps([
         { text: good.en, why: 'Le mot est bon. Fais une phrase : commence par « It’s ».' },
         { text: `Its ${good.en}`, why: ITS },
