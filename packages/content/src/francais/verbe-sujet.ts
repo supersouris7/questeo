@@ -4,6 +4,7 @@ import type { Rng } from '../rng.ts';
 import type { Level, QuestionDraft, Sens, Skill, Trap } from '../types.ts';
 import {
   AVANT_SUJET,
+  AVANT_TYPES,
   GROUPES_SUJETS,
   NOMS_VERBES,
   PHRASES_DOUBLES,
@@ -12,6 +13,7 @@ import {
   PHRASES_SIMPLES,
   SENS_VS,
   SUJETS,
+  SUJETS_ET_APRES_VERBE,
   SUJETS_PIEGES,
   TYPE_LABEL,
   VERBES_IRREGULIERS,
@@ -24,7 +26,7 @@ import {
   type Sujet,
   type TypeSujet,
 } from './verbe-sujet.donnees.ts';
-import { at, document, lowerFirst, pickN, same, textTrap } from './outils.ts';
+import { at, document, listes, lowerFirst, pickN, same, segments, textTrap } from './outils.ts';
 
 /**
  * Chapitre « Le verbe et le sujet » (CM1). Programme de français du cycle 3 (BO du 17 avril 2025),
@@ -497,24 +499,43 @@ const observeType = (s: Sujet): string => {
   return `Compte les noms de « ${s.s} » : un seul.`;
 };
 
-const stepsType = (s: Sujet, pre?: string) => [
-  pre
-    ? `Efface « ${pre.slice(0, -1)} » : ce groupe dit quand.`
-    : `Pose la question : « Qui est-ce qui ${quiReste(s.reste)} ? »`,
+const stepsType = (s: Sujet) => [
+  `Pose la question : « Qui est-ce qui ${quiReste(s.reste)} ? »`,
   `Repère le sujet : « ${s.s} ».`,
   observeType(s),
   `Choisis la réponse : **${TYPE_LABEL[s.type]}**.`,
 ];
 
-/** Les trois types à choisir, toujours dans le même ordre, sans leur définition (niveaux 3 et 4). */
-const choixType = (s: Sujet) => ({
-  answer: {
-    kind: 'choice' as const,
-    options: TYPES.map((t) => TYPE_LABEL[t]),
-    correct: TYPES.indexOf(s.type),
-  },
-  traps: TYPES.flatMap((t, option) => (t === s.type ? [] : [{ option, why: whyType(s, t) }])),
-});
+/** Texte à trous des niveaux 3 et 4 : une liste des trois types par phrase, sans leur définition. */
+function trousTypes(rng: Rng, avecQuand: boolean): QuestionDraft {
+  const sujets = pickN(rng, SUJETS, 3);
+  const quand = rng.shuffle(AVANT_TYPES);
+  const pres = sujets.map((_, i) => (avecQuand ? at(quand, i) : undefined));
+  const reponses = sujets.map((s) => TYPE_LABEL[s.type]);
+  return {
+    prompt: `${avecQuand ? 'Attention au début ! ' : 'Lis ce texte. '}Choisis le type du sujet de chaque phrase.`,
+    figure: document(
+      'Trois phrases',
+      sujets.map((s, i) => phraseS(s, pres[i])),
+    ),
+    answer: {
+      kind: 'cloze',
+      parts: segments(sujets.map((_, i) => `Phrase ${i + 1} : `)),
+      blanks: listes(Object.values(TYPE_LABEL), reponses),
+    },
+    hint: avecQuand
+      ? 'Efface le groupe qui dit quand. Cherche ensuite qui fait l’action.'
+      : 'Cherche chaque sujet avec « Qui est-ce qui ». Compte ensuite ses noms.',
+    steps: [
+      ...sujets.map((s, i) => {
+        const pre = pres[i];
+        const efface = pre ? `efface « ${pre.slice(0, -1)} ». ` : '';
+        return `Phrase ${i + 1} : ${efface}${observeType(s)}`;
+      }),
+      `Choisis dans l’ordre : **${reponses.join(' ; ')}**.`,
+    ],
+  };
+}
 
 function typesSujetsDraft(rng: Rng, level: Level): QuestionDraft {
   switch (level) {
@@ -526,7 +547,7 @@ function typesSujetsDraft(rng: Rng, level: Level): QuestionDraft {
         TYPES.filter((t) => t !== s.type).map((t) => ({ label: OPTION_LABEL[t], why: whyType(s, t) })),
       );
       return {
-        prompt: `Dans « ${phraseS(s)} », le sujet est « ${s.s} ». Choisis sa sorte.`,
+        prompt: `Dans « ${phraseS(s)} », le sujet est « ${s.s} ». Choisis son type.`,
         answer,
         traps,
         hint: 'Cherche s’il y a un nom, et combien.',
@@ -563,38 +584,25 @@ function typesSujetsDraft(rng: Rng, level: Level): QuestionDraft {
         ],
       };
     }
-    case 3: {
-      const s = rng.pick(SUJETS);
-      return {
-        prompt: `Trouve le sujet, puis choisis sa sorte : « ${phraseS(s)} »`,
-        ...choixType(s),
-        hint: 'Trouve d’abord le sujet. Compte ensuite ses noms.',
-        steps: stepsType(s),
-      };
-    }
-    case 4: {
-      // Seule nouveauté du niveau : le groupe qui dit quand. Les sujets à piège arrivent au niveau 5.
-      const s = rng.pick(SUJETS);
-      const pre = rng.pick(AVANT_SUJET);
-      return {
-        prompt: `Attention au piège ! Choisis la sorte du sujet : « ${phraseS(s, pre)} »`,
-        ...choixType(s),
-        hint: 'Supprime le groupe qui dit quand. Regarde les noms du sujet.',
-        steps: stepsType(s, pre),
-      };
-    }
+    case 3:
+      return trousTypes(rng, false);
+    case 4:
+      // Seule nouveauté du niveau : le groupe qui dit quand. Les phrases à piège arrivent au niveau 5.
+      return trousTypes(rng, true);
     default: {
-      const k = rng.int(1, 2);
+      const k = rng.int(1, 3);
       const piege = rng.pick(SUJETS_PIEGES);
+      const piegeEt = rng.pick(SUJETS_ET_APRES_VERBE);
       const rest = pickN(
         rng,
-        SUJETS.filter((s) => s.type !== 'noms'),
+        SUJETS.filter((s) => s.type !== 'noms' && s.s !== piegeEt.s),
         3 - k,
       );
       const noms = pickN(rng, byType('noms'), k);
-      const lines = rng.shuffle<Sujet>([...noms, piege, ...rest]);
+      const lines = rng.shuffle<Sujet>([...noms, piege, piegeEt, ...rest]);
       const p = lines.filter((s) => s.type === 'pronom').length;
       const g = lines.filter((s) => s.type === 'gn').length;
+      const comptes = lines.filter((s) => s.type === 'noms').map((s) => `« ${s.s} »`);
       return {
         prompt: 'Lis ce texte. Dans combien de phrases le sujet est-il formé de plusieurs noms ?',
         figure: document(
@@ -606,18 +614,19 @@ function typesSujetsDraft(rng: Rng, level: Level): QuestionDraft {
           // En premier (un de trop, un oublié) : à valeur égale, seule la première explication est gardée.
           [
             k + 1,
-            `Tu en as compté un de trop. Dans « ${piege.s} », ${piege.piege ?? ''} C’est un seul groupe nominal.`,
+            `Tu en as compté un de trop. Dans « ${piege.s} », ${piege.piege ?? ''} Dans « ${piegeEt.s} ${piegeEt.reste} », « et » n’est pas dans le sujet.`,
           ],
-          [k - 1, `Tu en as oublié un. Relis chaque sujet, comme « ${at(noms, 0).s} » : « et » y relie des noms.`],
+          [k - 1, `Tu en as oublié un. Relis chaque sujet, comme « ${at(noms, 0).s} » : il a plusieurs noms.`],
           [g, 'Tu as compté les groupes nominaux : ils n’ont qu’un seul nom noyau.'],
           ...(p > 0
             ? [[p, 'Tu as compté les pronoms : un pronom remplace un nom, ce n’est pas « plusieurs noms ».'] as const]
             : []),
         ]),
-        hint: 'Cherche les sujets où « et » relie des noms.',
+        hint: 'Trouve d’abord chaque sujet. Compte les noms du sujet seulement.',
         steps: [
-          'Trouve le sujet de chaque ligne.',
-          'Garde les sujets où « et » relie des noms.',
+          'Trouve le sujet de chaque ligne avec « Qui est-ce qui ».',
+          'Écarte les « et » placés après le verbe.',
+          `Garde les sujets à plusieurs noms : ${comptes.join(' ; ')}.`,
           `Compte les sujets gardés : **${k}**.`,
         ],
       };

@@ -8,6 +8,7 @@ import type { Level, Question } from '../types.ts';
 import { FCM1_VERBE_SUJET } from './verbe-sujet.ts';
 import {
   AVANT_SUJET,
+  AVANT_TYPES,
   FAITS_VS,
   GROUPES_SUJETS,
   NOMS_VERBES,
@@ -16,6 +17,7 @@ import {
   PHRASES_NEGATIVES,
   PHRASES_SIMPLES,
   SUJETS,
+  SUJETS_ET_APRES_VERBE,
   SUJETS_PIEGES,
   VERBES_IRREGULIERS,
   VERBES_REGULIERS,
@@ -184,47 +186,71 @@ describe('repasse du chapitre', () => {
   });
 
   it('groupes nominaux du CM1 seulement : aucun complément du nom parmi les sujets', () => {
-    const groupes = [...GROUPES_SUJETS.map((g) => g.gs), ...[...SUJETS, ...SUJETS_PIEGES].map((x) => x.s)];
+    const groupes = [
+      ...GROUPES_SUJETS.map((g) => g.gs),
+      ...[...SUJETS, ...SUJETS_PIEGES, ...SUJETS_ET_APRES_VERBE].map((x) => x.s),
+    ];
     for (const g of groupes) expect(g).not.toMatch(/ (de|du|des|d’|à|au|aux) /);
   });
 
-  it('types de sujets, niveaux 3 et 4 : les trois réponses attendues sont proposées, chaque erreur expliquée', () => {
+  const LABELS = ['un pronom personnel', 'un groupe nominal', 'plusieurs noms'];
+  const typeDe = (line: string) =>
+    SUJETS.find((x) => line.toLowerCase().includes(`${x.s} ${x.reste}`.toLowerCase()))?.type ?? '';
+
+  it('types de sujets, niveaux 3 et 4 : trois phrases à trier, chacune avec la liste des trois types', () => {
     for (const level of [3, 4] as const) {
-      const correct = new Set<number>();
+      const attendus = new Set<string>();
       each('fcm1-types-sujets', level, (q) => {
-        if (q.answer.kind !== 'choice') throw new Error('choix attendu');
-        expect(q.answer.options).toEqual(['un pronom personnel', 'un groupe nominal', 'plusieurs noms']);
-        const sujet = SUJETS.find((x) => q.prompt.toLowerCase().includes(`${x.s} ${x.reste}`.toLowerCase()));
-        expect(q.answer.correct, q.prompt).toBe(['pronom', 'gn', 'noms'].indexOf(sujet?.type ?? ''));
-        for (const index of [0, 1, 2]) {
-          const result = check(q, { kind: 'choice', index });
-          expect(result.correct).toBe(index === q.answer.correct);
-          if (!result.correct) expect(result.why).toContain(`Le sujet « ${sujet?.s} »`);
-        }
-        correct.add(q.answer.correct);
+        if (q.answer.kind !== 'cloze') throw new Error('texte à trous attendu');
+        expect(lines(q)).toHaveLength(3);
+        expect(new Set(lines(q)).size).toBe(3);
+        expect(q.answer.blanks).toHaveLength(3);
+        const answers = q.answer.blanks.map((b, i) => {
+          if (b.mode !== 'list') throw new Error('liste attendue');
+          expect(b.options).toEqual(LABELS);
+          expect(b.correct, lines(q)[i]).toBe(['pronom', 'gn', 'noms'].indexOf(typeDe(lines(q)[i] ?? '')));
+          attendus.add(b.options[b.correct] ?? '');
+          return b.options[b.correct] ?? '';
+        });
+        expect(check(q, { kind: 'cloze', answers }).correct).toBe(true);
+        const faux = [LABELS.find((l) => l !== answers[0]) ?? '', ...answers.slice(1)];
+        expect(check(q, { kind: 'cloze', answers: faux }).parts).toEqual([false, true, true]);
+        expect(q.steps.at(-1)).toContain(`**${answers.join(' ; ')}**`);
       });
-      expect(correct.size).toBe(3);
+      expect(attendus.size).toBe(3);
     }
   });
 
-  it('types de sujets, niveau 4 : seule nouveauté, un groupe qui dit quand devant un sujet du niveau 3', () => {
-    const phrase = (x: (typeof SUJETS)[number]) => `${x.s} ${x.reste}`.toLowerCase();
-    const contient = (q: Question, x: (typeof SUJETS)[number]) => q.prompt.toLowerCase().includes(phrase(x));
+  it('types de sujets, niveau 4 : seule nouveauté, un groupe qui dit quand devant chaque phrase', () => {
     for (const level of [3, 4] as const)
       each('fcm1-types-sujets', level, (q) => {
-        expect(
-          SUJETS.some((x) => contient(q, x)),
-          q.prompt,
-        ).toBe(true);
-        expect(
-          SUJETS_PIEGES.some((x) => contient(q, x)),
-          q.prompt,
-        ).toBe(false);
-        expect(
-          AVANT_SUJET.some((a) => q.prompt.includes(`« ${a} `)),
-          q.prompt,
-        ).toBe(level === 4);
+        const devant = lines(q).map((l) => AVANT_TYPES.find((a) => l.startsWith(`${a} `)));
+        if (level === 3) expect(devant).toEqual([undefined, undefined, undefined]);
+        else expect(new Set(devant.filter(Boolean)).size, lines(q).join(' ')).toBe(3);
+        for (const l of lines(q)) expect(typeDe(l), l).not.toBe('');
       });
+  });
+
+  it('types de sujets : le niveau 1 demande le « type », mot du programme', () => {
+    each('fcm1-types-sujets', 1, (q) => expect(q.prompt).toContain('Choisis son type.'));
+  });
+
+  it('types de sujets, niveau 5 : de un à trois sujets comptés et nommés, un « et » hors du sujet à écarter', () => {
+    const totaux = new Set<number>();
+    for (let seed = 0; seed < 500; seed++) {
+      const q = generate('fcm1-types-sujets', 5, seed);
+      const piege = SUJETS_ET_APRES_VERBE.find((x) => lines(q).includes(`${x.s} ${x.reste}.`));
+      expect(piege, `graine ${seed}`).toBeDefined();
+      expect(lines(q)).toHaveLength(5);
+      expect(lines(q).filter((l) => l.startsWith(`${piege?.s} `))).toHaveLength(1);
+      const comptes = SUJETS.filter((x) => x.type === 'noms' && lines(q).includes(`${x.s} ${x.reste}.`));
+      expect(check(q, { kind: 'number', text: String(comptes.length) }).correct).toBe(true);
+      for (const x of comptes) expect(q.steps.join(' ')).toContain(`« ${x.s} »`);
+      const tropUn = JSON.stringify(check(q, { kind: 'number', text: String(comptes.length + 1) }));
+      expect(tropUn).toContain('n’est pas dans le sujet');
+      totaux.add(comptes.length);
+    }
+    expect([...totaux].sort()).toEqual([1, 2, 3]);
   });
 
   it('types de sujets, niveau 5 : compter le sujet piège a toujours son explication', () => {
@@ -286,8 +312,8 @@ describe('repasse du chapitre', () => {
       'dort sur le canapé',
       'dort sur le tapis',
       'entre en classe',
-      'habite près de la mer',
       'joue au ballon',
+      'joue aux cartes',
       'joue dans la cour',
       'joue du piano',
       'lit un livre',

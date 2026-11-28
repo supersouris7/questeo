@@ -68,7 +68,7 @@ export const SENS_VS = {
   },
   typesSujets: {
     type: 'usage',
-    text: 'Tu apprendras à remplacer un groupe nominal sujet par un pronom, comme « il » ou « elle ».',
+    text: 'Quand tu écris, tu peux remplacer un groupe nominal sujet par « il » ou « elle ».',
     source: PROGRAMME,
     citation: 'Remplacer un groupe nominal sujet par un pronom personnel sujet',
   },
@@ -246,7 +246,7 @@ export const SUJETS: readonly Sujet[] = [
   { s: 'Les oiseaux', reste: 'chantent très fort', type: 'gn' },
   { s: 'La maîtresse', reste: 'lit une histoire', type: 'gn' },
   { s: 'Un gros nuage gris', reste: 'cache le soleil', type: 'gn' },
-  { s: 'Mes deux cousins', reste: 'habitent près de la mer', type: 'gn' },
+  { s: 'Mes deux cousins', reste: 'jouent aux cartes', type: 'gn' },
   { s: 'Mon père et ma mère', reste: 'préparent le repas', type: 'noms' },
   { s: 'Le chat et le chien', reste: 'dorment sur le tapis', type: 'noms' },
   { s: 'Ma sœur et mon frère', reste: 'jouent au ballon', type: 'noms' },
@@ -288,6 +288,17 @@ export const SUJETS_PIEGES: readonly Sujet[] = [
     piege: '« voisins » est au pluriel, mais c’est un seul nom : « nouveaux » est un adjectif.',
   },
 ];
+
+/** Pas de « plusieurs noms » : « et » est après le verbe, pas dans le sujet. */
+export const SUJETS_ET_APRES_VERBE: readonly Sujet[] = [
+  { s: 'La maîtresse', reste: 'prend un livre et un stylo', type: 'gn' },
+  { s: 'Mon voisin', reste: 'achète du pain et du lait', type: 'gn' },
+  { s: 'Elle', reste: 'chante et danse', type: 'pronom' },
+  { s: 'Ils', reste: 'sautent et courent', type: 'pronom' },
+];
+
+/** Groupes placés devant le sujet dans les textes à trous : un moment précis, possible avec chaque phrase. */
+export const AVANT_TYPES: readonly string[] = ['Ce matin,', 'En ce moment,', 'Cet après-midi,'];
 
 export const TYPE_LABEL: Record<TypeSujet, string> = {
   pronom: 'un pronom personnel',

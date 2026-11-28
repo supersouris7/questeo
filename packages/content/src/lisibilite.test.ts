@@ -101,6 +101,11 @@ const REPRISES = [
   'm5-boss-fractions-reste',
   'm6-arrondir',
   'p5-etats',
+  'fcm1-verbe-conjugue',
+  'fcm1-infinitif',
+  'fcm1-groupe-sujet',
+  'fcm1-types-sujets',
+  'fcm1-nom-ou-verbe',
 ];
 
 describe('détecteur : catalogue', () => {
