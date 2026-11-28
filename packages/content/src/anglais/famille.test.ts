@@ -97,10 +97,35 @@ describe('anglais cm1 : famille, corps, vêtements', () => {
           ),
         ),
     );
-    for (const text of ['sweater', 'a sweater', 'a pullover', 'sneakers', 'pants', 'a tee-shirt', 'a pair of jeans'])
+    for (const text of ['sweater', 'a sweater', 'a pullover', 'sneakers', 'a tee-shirt', 'a pair of jeans'])
       expect(accepted[0], text).toContain(text);
-    for (const text of ['a pink tshirt', 'a pink tee-shirt', 'a pink sweater', 'red sneakers', 'gray pants'])
+    for (const text of ['a pink tshirt', 'a pink tee-shirt', 'a pink sweater', 'red sneakers', 'gray trousers'])
       expect(accepted[1], text).toContain(text);
+    // En anglais britannique, « pants » désigne un sous-vêtement.
+    for (const set of accepted) expect([...set].filter((t) => /\bpants\b/.test(t))).toEqual([]);
+  });
+
+  it('vêtements, niveau 4 : pas de consigne « sans a » quand « a pair of » est accepté', () => {
+    for (const q of questions('acm1-vetements', 4)) {
+      if (q.answer.kind !== 'text') throw new Error('saisie attendue');
+      if (q.answer.accepted.some((t) => t.startsWith('a pair of '))) expect(q.prompt).not.toContain('sans « a »');
+    }
+  });
+
+  it('have got, niveau 5 : réponses avec « got » acceptées, pronom ou prénom, sans fausse équivalence', () => {
+    const seen = new Set<string>();
+    for (const q of questions('acm1-have-got', 5)) {
+      const kid = /« Has (\w+) got/.exec(q.prompt)?.[1] ?? '';
+      if (q.answer.kind !== 'text') throw new Error('saisie attendue');
+      const yes = q.answer.accepted[0]?.startsWith('Yes') ?? false;
+      const he = / (he|she) /.exec(q.answer.accepted[0] ?? '')?.[1] ?? '';
+      seen.add(yes ? 'oui' : 'non');
+      for (const who of [he, kid])
+        for (const text of yes ? [`Yes, ${who} has got.`] : [`No, ${who} hasn’t got.`, `No, ${who} has not got.`])
+          expect(check(q, { kind: 'text', text }).correct, text).toBe(true);
+      expect(q.steps.join(' ')).not.toMatch(/veut dire (oui|non)/);
+    }
+    expect(seen.size).toBe(2);
   });
 
   it('vêtements, niveau 5 : couleur lue sur la ligne du bon enfant, réponse absente du texte', () => {

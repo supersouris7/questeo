@@ -56,7 +56,7 @@ function guided(q: QuestionDraft, list: readonly Word[], think: string): Questio
       ...q,
       steps: [
         `Lis le mot anglais : « ${known.en} ».`,
-        'Dis-le tout bas, puis cherche son sens.',
+        'Repère le mot français de la liste qui correspond.',
         `Choisis **${known.fr}**.`,
       ],
     };
@@ -159,7 +159,7 @@ const family: Skill = {
   version: 2,
   lesson: {
     memo: [
-      'La famille : mother (mum) = mère, father (dad) = père, sister = sœur, brother = frère, baby = bébé.',
+      'La famille : mother = mère ; mum = maman ; father = père ; dad = papa ; sister = sœur ; brother = frère ; baby = bébé.',
       'Les grands-parents sont les **parents** de tes parents : grandmother (grandma) et grandfather (grandad).',
       'Aussi : uncle (oncle), auntie (tante), cousin (cousin ou cousine), son (fils).',
     ],
@@ -309,7 +309,10 @@ function haveGotShort(rng: Rng): QuestionDraft {
         text: `${short.replace('’', '')} got ${o}`,
         why: 'Il manque l’apostrophe : elle remplace les lettres enlevées.',
       },
-      { text: `${s.en} got ${o}`, why: `Il manque « ${s.has} » sous sa forme courte.` },
+      {
+        text: `${s.en} got ${o}`,
+        why: `Sans « ${s.has} », la phrase parle du passé. Ajoute sa forme courte.`,
+      },
       { text: `${s.en}${s.has === 'has' ? '’ve' : '’s'} got ${o}`, why: whyHave(s) },
     ]),
     hint: 'Colle le sujet et le petit verbe. Une apostrophe prend la place des lettres enlevées.',
@@ -344,7 +347,7 @@ function haveGotNegative(rng: Rng): QuestionDraft {
     hint: 'Ajoute « not » juste après le premier petit verbe.',
     steps: [
       `Repère le verbe placé après le sujet : « ${s.has} ».`,
-      `Ajoute « not » juste après : « ${neg} ».`,
+      `Ajoute « not » juste après, puis raccourcis : « ${s.has} not » → « ${neg} ».`,
       `Écris la phrase : **${good}.**`,
     ],
   };
@@ -445,9 +448,10 @@ const haveGot: Skill = {
     const good = yes ? `Yes, ${he} has` : `No, ${he} hasn’t`;
     // Le prénom à la place du pronom reste une réponse juste.
     const forms = [he, kid].flatMap((who) =>
-      (yes ? [`${who} has`] : [`${who} hasn’t`, `${who} has not`]).flatMap((end) =>
-        yes ? [`Yes, ${end}`, `Yes ${end}`] : [`No, ${end}`, `No ${end}`],
-      ),
+      (yes
+        ? [`${who} has`, `${who} has got`]
+        : [`${who} hasn’t`, `${who} has not`, `${who} hasn’t got`, `${who} has not got`]
+      ).flatMap((end) => (yes ? [`Yes, ${end}`, `Yes ${end}`] : [`No, ${end}`, `No ${end}`])),
     );
     const other = he === 'he' ? 'she' : 'he';
     const pronoun = he === 'he' ? 'He' : 'She';
@@ -475,7 +479,9 @@ const haveGot: Skill = {
       hint: 'Cherche la phrase qui parle de cet objet. Répète le verbe de la question dans ta réponse.',
       steps: [
         `Cherche la ligne qui parle de « ${asked} ».`,
-        `Regarde son verbe : « ${yes ? 'has' : 'hasn’t'} » veut dire ${yes ? 'oui' : 'non'}.`,
+        yes
+          ? 'Regarde son verbe : « has » veut dire « a ». La réponse est oui.'
+          : 'Regarde son verbe : « hasn’t » veut dire « n’a pas ». La réponse est non.',
         `Commence par « ${yes ? 'Yes' : 'No'} », puis ajoute « ${he} » et ce verbe.`,
         `Écris : **${good}.**`,
       ],
@@ -568,7 +574,7 @@ const body: Skill = {
     const otherIndex = (i + 1) % 3;
     const good = `It’s got ${n} ${asked}`;
     return {
-      prompt: `Lis la fiche du monstre. Combien ${fr[asked] ?? ''} a-t-il ? Réponds en anglais : commence par « It’s got ».`,
+      prompt: `Lis la fiche du monstre. Combien ${fr[asked] ?? ''} a-t-il ? Réponds en anglais : commence par « It’s got » ou « It has got ».`,
       figure: {
         kind: 'document',
         title: 'My monster',
@@ -690,7 +696,8 @@ const clothes: Skill = {
       const forms = [...coloured(w, c, many ? '' : 'a '), ...pair];
       const frPhrase = `${w.fr} de couleur « ${c.fr} »`;
       return {
-        prompt: `Écris en anglais : ${frPhrase}${many ? ' (sans « a »)' : ' (avec « a »)'}.`,
+        // « a pair of … » est juste aussi : pas de consigne « sans a » pour ces mots.
+        prompt: `Écris en anglais : ${frPhrase}${pair.length > 0 ? '' : many ? ' (sans « a »)' : ' (avec « a »)'}.`,
         answer: { kind: 'text', accepted: full(forms) },
         traps: [
           {
@@ -741,7 +748,7 @@ const clothes: Skill = {
         { text: `a ${c2.en} ${asked}`, why: `« ${c2.en} » est la couleur d’un autre habit ${de(kid)}.` },
         { text: `a ${asked} ${c1.en}`, why: 'En anglais, la couleur se place avant le nom.' },
         { text: `${c1.en} ${asked}`, why: 'Il manque le petit mot « a » au début.' },
-        { text: c1.en, why: 'La bonne couleur ! Écris aussi « a » devant et le vêtement après.' },
+        { text: c1.en, why: 'Il manque « a » et le vêtement.' },
       ],
       hint: `Comment dit-on « ${w.fr} » en anglais ? Cherche ce mot sur la ligne ${de(kid)}.`,
       steps: [
@@ -963,7 +970,7 @@ const genitive: Skill = {
     ];
     const phraseGood = `${sibling}’s ${g1}`;
     return {
-      prompt: `Lis le texte. À qui est « the ${c1} ${g1} » ? Écris en anglais : le prénom, ’s, puis « ${g1} ».`,
+      prompt: `Lis le texte. À qui est « the ${c1} ${g1} » ? Écris en anglais le prénom, ’s et « ${g1} ». La couleur est permise.`,
       figure: { kind: 'document', title: 'Whose is it?', lines, credit: 'Écrit pour l’exercice.' },
       answer: {
         kind: 'text',

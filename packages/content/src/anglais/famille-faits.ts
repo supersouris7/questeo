@@ -67,7 +67,7 @@ export const PLURALS: readonly {
 /** Les vêtements : fiches « Clothes flashcards » (séries 1 et 2). */
 export const CLOTHES: readonly Word[] = [
   { en: 't-shirt', fr: 'un tee-shirt', alt: ['t shirt', 'tshirt', 'tee-shirt', 'tee shirt'], typo: 't-shurt' },
-  { en: 'trousers', fr: 'un pantalon', alt: ['pants'], typo: 'trouser' },
+  { en: 'trousers', fr: 'un pantalon', typo: 'trouser' },
   { en: 'skirt', fr: 'une jupe', typo: 'skurt' },
   { en: 'dress', fr: 'une robe', typo: 'dres' },
   { en: 'shirt', fr: 'une chemise', typo: 'shurt' },
