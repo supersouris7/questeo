@@ -360,11 +360,14 @@ function piegesRelation(c: Cas): (readonly [string, string])[] {
     [autre, `« ${autre} » est un ${classe}. Il faut un ${c.entree.classe}.`],
     ...(oppose?.reponse.mots.map((m) => [m, `C’est un ${oppose.relation} : on demande un ${c.relation}.`] as const) ??
       []),
+    ...c.reponse.mots
+      .slice(1)
+      .map((m) => [m, 'Relis le début demandé et compte les lettres : un autre mot est attendu.'] as const),
   ];
 }
 
 function ecrireRelation(c: Cas): QuestionDraft {
-  return ecrire(c.reponse.mots, piegesRelation(c), {
+  return ecrire([principale(c)], piegesRelation(c), {
     prompt: `Écris un ${c.relation} ${deLaClasse(c.entree.classe)} « ${c.entree.mot} ». Il commence par « ${debut(c)} » et compte ${principale(c).length} lettres.`,
     hint: 'Essaie ton mot dans une phrase avec la même classe.',
     steps: [DEF_RELATION[c.relation], DEF_CLASSE, conclure('Écris', c)],
@@ -408,7 +411,7 @@ function relationsDraft(rng: Rng, level: Level): QuestionDraft {
         },
         choisis.map((c) => ({
           texte: `${remplir(c.entree.phrase, `« ${c.entree.mot} »`)} ${maj(c.relation)} : ${debut(c)}… (${principale(c).length} lettres)`,
-          accepted: c.reponse.mots,
+          accepted: [principale(c)],
         })),
       );
     }

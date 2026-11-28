@@ -177,7 +177,7 @@ export const PHRASES_CONSTRUITES: readonly PhraseConstruite[] = [
 export type Classe = 'nom' | 'verbe' | 'adjectif' | 'adverbe';
 
 export interface Reponse {
-  /** Réponse principale (celle que décrit l'indice), puis les autres réponses acceptées. */
+  /** Réponse principale, la seule acceptée à l'écrit, puis les mots proches que le début donné doit écarter. */
   readonly mots: readonly [string, ...string[]];
   readonly faitId: string;
 }

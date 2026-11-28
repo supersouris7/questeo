@@ -213,10 +213,50 @@ describe('correction des réponses', () => {
     for (const q of tirages('f6-prefixe-radical-suffixe', 3)) expect(q.prompt).not.toMatch(/illisible|imbuvable/);
   });
 
-  it('antonyme : « malhabile » est accepté, la mauvaise classe est expliquée', () => {
+  it('antonyme de « habile » : la mauvaise classe est expliquée', () => {
     const q = trouve('f6-synonymes-antonymes', 3, 'antonyme de l’adjectif « habile »');
-    for (const mot of ['maladroit', 'malhabile']) expect(check(q, saisie(mot)).correct).toBe(true);
+    expect(check(q, saisie('maladroit')).correct).toBe(true);
     expect(check(q, saisie('habileté')).why).toContain('nom');
+  });
+
+  it('indice « début et nombre de lettres » : chaque réponse acceptée le respecte', () => {
+    const indices = [/(?:commence par) « (\p{L}+) » et compte (\d+) lettres/u, /(\p{L}+)… \((\d+) lettres\)/u];
+    let controles = 0;
+    const verifier = (texte: string, accepted: readonly string[]) => {
+      const m = indices.map((r) => r.exec(texte)).find(Boolean);
+      if (!m) return;
+      controles++;
+      for (const juste of accepted) {
+        expect(juste.startsWith(m[1] ?? ''), `${texte} → ${juste}`).toBe(true);
+        expect(juste, `${texte} → ${juste}`).toHaveLength(Number(m[2]));
+      }
+    };
+    for (const s of skills)
+      for (const level of LEVELS)
+        for (const q of tirages(s.id, level)) {
+          if (q.answer.kind === 'text') verifier(q.prompt, q.answer.accepted);
+          if (q.answer.kind === 'cloze' && q.figure?.kind === 'document') {
+            const lines = q.figure.lines;
+            q.answer.blanks.forEach((b, i) => {
+              if (b.mode === 'text') verifier(lines[i] ?? '', b.accepted);
+            });
+          }
+        }
+    expect(controles).toBeGreaterThan(0);
+  });
+
+  it.each([
+    [3, 'antonyme du verbe « diminuer »', 'augmenter', ['accentuer', 'accroître', 'agrandir', 'allonger']],
+    [4, 'synonyme du nom « pénurie »', 'manque', ['carence', 'défaut', 'insuffisance', 'rareté']],
+    [3, 'antonyme de l’adjectif « habile »', 'maladroit', ['malhabile']],
+    [3, 'antonyme du nom « victoire »', 'défaite', ['déroute']],
+  ] as const)('N%i, %s : seul « %s » suit l’indice, les autres mots sont expliqués', (level, morceau, juste, hors) => {
+    const q = trouve('f6-synonymes-antonymes', level, morceau);
+    expect(check(q, saisie(juste)).correct).toBe(true);
+    for (const mot of hors) {
+      expect(check(q, saisie(mot)).correct, mot).toBe(false);
+      expect(check(q, saisie(mot)).why, mot).toContain('compte les lettres');
+    }
   });
 
   it('sens figuré N4 : initiale et nombre de lettres comme au niveau 3, sans le sens propre', () => {
@@ -288,13 +328,6 @@ describe('correction des réponses', () => {
     expect(check(q, saisie('dévorer')).why).toContain('conjugué');
   });
 
-  it('antonyme de « diminuer » : tous les antonymes cités sont acceptés, et eux seuls', () => {
-    const q = trouve('f6-synonymes-antonymes', 3, 'antonyme du verbe « diminuer »');
-    for (const mot of ['augmenter', 'accentuer', 'accroître', 'agrandir', 'allonger'])
-      expect(check(q, saisie(mot)).correct, mot).toBe(true);
-    expect(check(q, saisie('amplifier')).correct).toBe(false);
-  });
-
   it('antonyme de « diminuer » : l’indice ne désigne qu’une réponse aux niveaux 3 et 5', () => {
     const q = trouve('f6-synonymes-antonymes', 3, 'antonyme du verbe « diminuer »');
     expect(q.prompt).toContain('Il commence par « au » et compte 9 lettres.');
@@ -315,12 +348,6 @@ describe('correction des réponses', () => {
         expect(lines[i]).toContain(b.accepted[0]);
       });
     }
-  });
-
-  it('synonyme de « pénurie » : tous les synonymes cités sont acceptés', () => {
-    const q = trouve('f6-synonymes-antonymes', 4, 'synonyme du nom « pénurie »');
-    for (const mot of ['manque', 'carence', 'défaut', 'insuffisance', 'rareté'])
-      expect(check(q, saisie(mot)).correct, mot).toBe(true);
   });
 
   it('dérivé ou composé : jamais de mot simple, un seul mot de la sorte demandée', () => {
