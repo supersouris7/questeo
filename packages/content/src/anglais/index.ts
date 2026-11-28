@@ -27,6 +27,8 @@ import { ENGLISH_FUTURE_CHAPTER } from './futur.ts';
 import { ENGLISH_ADVICE_CHAPTER } from './modaux-souhait.ts';
 import { ENGLISH_PRONOUNS_5E_CHAPTER } from './groupe-nominal-5e.ts';
 import { ENGLISH_LINKING_5E_CHAPTER } from './relier-situer.ts';
+import { ENGLISH_LISTENING_5E_CHAPTER } from './ecoute-5e.ts';
+import { ENGLISH_VOCABULARY_5E_CHAPTER } from './vocabulaire-5e.ts';
 
 export const ANGLAIS_CHAPTERS: readonly Chapter[] = [
   ENGLISH_PRESENT_SIMPLE_CHAPTER,
@@ -56,5 +58,7 @@ export const ANGLAIS_CHAPTERS: readonly Chapter[] = [
   ENGLISH_ADVICE_CHAPTER,
   ENGLISH_PRONOUNS_5E_CHAPTER,
   ENGLISH_LINKING_5E_CHAPTER,
+  ENGLISH_LISTENING_5E_CHAPTER,
+  ENGLISH_VOCABULARY_5E_CHAPTER,
   ...ENGLISH_GRAMMAR_CHAPTERS.filter((c) => ['4e', '3e'].includes(c.grade)),
 ];

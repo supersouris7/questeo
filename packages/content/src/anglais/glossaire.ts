@@ -1187,4 +1187,11 @@ export const GLOSSAIRE: readonly SubjectTerm[] = [
     definition: 'Forme d’un adjectif qui compare deux choses.',
     example: 'old → older : plus vieux.',
   },
+  {
+    id: 'portrait',
+    word: 'portrait',
+    forms: ['portrait', 'portraits'],
+    definition: 'Une description d’une personne, en mots ou en image.',
+    example: '« He was born in Kentucky » fait partie d’un portrait.',
+  },
 ];
