@@ -158,6 +158,20 @@ export const GLOSSAIRE: readonly SubjectTerm[] = [
     example: 'She has got a bike.',
   },
   {
+    id: 'proprietaire',
+    word: 'propriétaire',
+    forms: ['propriétaire', 'propriétaires'],
+    definition: 'La personne (ou l’animal) à qui est une chose.',
+    example: 'Dans Tom’s dog, le propriétaire est Tom.',
+  },
+  {
+    id: 'forme-courte',
+    word: 'forme courte',
+    forms: ['forme courte'],
+    definition: 'Des mots raccourcis et collés, avec une apostrophe.',
+    example: 'I have got devient I’ve got.',
+  },
+  {
     id: 'genitif',
     word: 'génitif',
     forms: ['génitif'],
