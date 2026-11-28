@@ -15,17 +15,13 @@ anglais	cm1	acm1-ecouter-comprendre	acm1-nombres-entendus	entrainement	1.73	etap
 anglais	cm1	acm1-temps	acm1-jours	entrainement	1.72	etapes-nombre=108, bulle-sans-action=150	
 anglais	cm1	acm1-gouts-capacites	acm1-animaux	entrainement	1.69	etapes-nombre=102, bulle-sans-action=150, memo-long=1	
 anglais	cm1	acm1-famille-corps	acm1-famille	entrainement	1.68	etapes-nombre=102, bulle-sans-action=150	
-anglais	cm1	acm1-be	acm1-be-present	entrainement	1.63	bulle-sans-action=150, etapes-nombre=64, phrase-longue=30, memo-long=1	
 anglais	cm1	acm1-gouts-capacites	acm1-can	entrainement	1.61	etapes-nombre=90, bulle-sans-action=150, memo-long=1	
 anglais	cm1	acm1-temps	acm1-couleurs	entrainement	1.61	etapes-nombre=90, bulle-sans-action=150, memo-long=1	
 anglais	cm1	acm1-se-presenter	acm1-how-old	entrainement	1.61	etapes-nombre=90, bulle-sans-action=150, peu-de-variantes=1, memo-long=1	
-anglais	cm1	acm1-be	acm1-questions-be	entrainement	1.61	etapes-nombre=90, bulle-sans-action=150, memo-long=1	
 anglais	cm1	acm1-famille-corps	acm1-vetements	entrainement	1.61	etapes-nombre=90, bulle-sans-action=150, memo-long=1	
 anglais	cm1	acm1-se-presenter	acm1-your-name	entrainement	1.61	etapes-nombre=90, bulle-sans-action=150, peu-de-variantes=1, memo-long=1	
 anglais	cm1	acm1-gouts-capacites	acm1-like	entrainement	1.46	etapes-nombre=68, bulle-sans-action=150, memo-long=1	
-anglais	cm1	acm1-possessifs	acm1-possessifs	entrainement	1.44	bulle-sans-action=150, etapes-nombre=48, phrase-longue=18	
 anglais	cm1	acm1-temps	acm1-date	entrainement	1.41	etapes-nombre=46, bulle-sans-action=150, bulle-chargee=14, memo-long=1	
-anglais	cm1	acm1-be	acm1-pronoms-sujets	entrainement	1.29	bulle-sans-action=150, etapes-nombre=12, phrase-longue=30, memo-long=1	
 anglais	cm1	acm1-famille-corps	acm1-genitif	entrainement	1.01	bulle-sans-action=150, memo-long=1	
 anglais	cm2	acm2-ecole-nourriture-animaux	acm2-some	entrainement	2.67	etapes-nombre=132, bulle-sans-action=150, phrase-longue=57, bulle-chargee=30, enonce-long=30, memo-long=1	
 anglais	cm2	acm2-ecouter-comprendre	acm2-dialogue	entrainement	2.21	etapes-nombre=90, bulle-sans-action=150, bulle-chargee=60, phrase-longue=30, peu-de-variantes=1, memo-long=1	
@@ -143,21 +139,17 @@ francais	cm1	fcm1-temps	fcm1-imparfait	entrainement	1.75	bulle-sans-action=150, 
 francais	cm1	fcm1-lecture	fcm1-lire-qui-quoi	entrainement	1.62	bulle-sans-action=150, etapes-nombre=46, bulle-chargee=16, phrase-longue=30, memo-long=1	
 francais	cm1	fcm1-orthographe-mots	fcm1-a-a	entrainement	1.61	etapes-nombre=90, bulle-sans-action=150, memo-long=1	
 francais	cm1	fcm1-complements	fcm1-objet-circonstanciel	entrainement	1.61	bulle-sans-action=150, bulle-chargee=30, phrase-longue=60, memo-long=1	
-francais	cm1	fcm1-phrases	fcm1-ponctuation-fin	entrainement	1.61	bulle-sans-action=150, phrase-longue=60, bulle-chargee=30, memo-long=1	
 francais	cm1	fcm1-accords	fcm1-participe-etre	entrainement	1.60	bulle-sans-action=150, consigne-sans-verbe=30, phrase-longue=30, etapes-nombre=30	
 francais	cm1	fcm1-lecture	fcm1-ordre-recit	entrainement	1.59	bulle-sans-action=150, etapes-nombre=30, bulle-chargee=25, consigne-sans-verbe=30, phrase-longue=4	
 francais	cm1	fcm1-vocabulaire	fcm1-mots-polysemiques	entrainement	1.47	bulle-sans-action=150, etapes-nombre=48, bulle-chargee=22	
 francais	cm1	fcm1-lecture	fcm1-consigne-document	entrainement	1.45	bulle-sans-action=150, etapes-nombre=54, bulle-chargee=12, memo-long=1	
 francais	cm1	fcm1-vocabulaire	fcm1-familles-de-mots	entrainement	1.44	bulle-sans-action=150, etapes-nombre=66	
 francais	cm1	fcm1-vocabulaire	fcm1-sens-contexte	entrainement	1.44	bulle-sans-action=150, etapes-nombre=66	
-francais	cm1	fcm1-phrases	fcm1-forme-negative	entrainement	1.41	bulle-sans-action=150, phrase-longue=60, memo-long=1	
 francais	cm1	fcm1-nature-mots	fcm1-nature-fonction	entrainement	1.41	bulle-sans-action=150, consigne-sans-verbe=30, phrase-longue=30, memo-long=1	
 francais	cm1	fcm1-verbe-sujet	fcm1-nom-ou-verbe	entrainement	1.41	bulle-sans-action=150, phrase-longue=60, memo-long=1	
 francais	cm1	fcm1-nature-mots	fcm1-pronoms-personnels	entrainement	1.41	bulle-sans-action=150, consigne-sans-verbe=60, memo-long=1	
 francais	cm1	fcm1-accords	fcm1-accord-gn	entrainement	1.40	bulle-sans-action=150, consigne-sans-verbe=30, etapes-nombre=30	
-francais	cm1	fcm1-phrases	fcm1-forme-exclamative	entrainement	1.40	bulle-sans-action=150, phrase-longue=60	
 francais	cm1	fcm1-orthographe-mots	fcm1-mots-invariables	entrainement	1.40	bulle-sans-action=150, phrase-longue=30, etapes-nombre=30	
-francais	cm1	fcm1-phrases	fcm1-types-phrases	entrainement	1.40	bulle-sans-action=150, etapes-nombre=30, phrase-longue=30	
 francais	cm1	fcm1-lecture	fcm1-sens-mot-texte	entrainement	1.37	bulle-sans-action=150, etapes-nombre=54, memo-long=1	
 francais	cm1	fcm1-vocabulaire	fcm1-synonymes	entrainement	1.36	bulle-sans-action=150, etapes-nombre=54	
 francais	cm1	fcm1-groupe-nominal	fcm1-gn-composition	entrainement	1.34	bulle-sans-action=150, consigne-sans-verbe=30, bulle-chargee=20, phrase-longue=1	
@@ -170,7 +162,6 @@ francais	cm1	fcm1-groupe-nominal	fcm1-adjectif-epithete	entrainement	1.21	bulle-
 francais	cm1	fcm1-nature-mots	fcm1-articles	entrainement	1.21	bulle-sans-action=150, consigne-sans-verbe=30, memo-long=1	
 francais	cm1	fcm1-complements	fcm1-cod-coi	entrainement	1.21	bulle-sans-action=150, consigne-sans-verbe=30, memo-long=1, phrase-longue=1	
 francais	cm1	fcm1-nature-mots	fcm1-determinants-poss-dem	entrainement	1.21	bulle-sans-action=150, consigne-sans-verbe=30, phrase-longue=1	
-francais	cm1	fcm1-phrases	fcm1-poser-question	entrainement	1.21	bulle-sans-action=150, phrase-longue=30, memo-long=1	
 francais	cm1	fcm1-present	fcm1-etre-avoir	entrainement	1.20	bulle-sans-action=150, etapes-nombre=30	
 francais	cm1	fcm1-accords	fcm1-feminin	entrainement	1.20	bulle-sans-action=150, phrase-longue=30	
 francais	cm1	fcm1-accords	fcm1-genre-nombre	entrainement	1.20	bulle-sans-action=150, consigne-sans-verbe=30	

@@ -507,6 +507,8 @@ export const SOURCES: readonly Source[] = [
     textDate: '2026',
     consultedOn: '2026-11-27',
   },
+  // Repasse rp-fr-cm1-01 (types et formes de phrases)
+  { ...tlfi('ne', 'ne', 'ne'), consultedOn: '2026-11-27' },
   // Lot fr-cm1-11 (lecture)
   academie('ou', 'où'),
   academie('quand', 'quand'),

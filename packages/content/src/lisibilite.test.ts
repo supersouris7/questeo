@@ -80,6 +80,11 @@ describe('détecteur : mesures', () => {
 
 /** Notions déjà reprises : le détecteur ne doit plus rien y signaler (bloquant). */
 const REPRISES = [
+  'fcm1-types-phrases',
+  'fcm1-poser-question',
+  'fcm1-forme-negative',
+  'fcm1-forme-exclamative',
+  'fcm1-ponctuation-fin',
   'm5-euclide',
   'm6-fraction-quotient',
   'm6-boss-fractions-gateau',

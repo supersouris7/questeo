@@ -14,21 +14,21 @@ export const GLOSSAIRE: readonly SubjectTerm[] = [
     word: 'phrase déclarative',
     forms: ['phrases déclaratives', 'déclarative', 'déclaratives', 'déclaratif'],
     definition: 'Phrase qui donne une information. Elle dit ce qui est, sans poser de question ni donner d’ordre.',
-    example: 'Le chat dort sur le canapé.',
+    example: 'Léo chante.',
   },
   {
     id: 'phrase-interrogative',
     word: 'phrase interrogative',
     forms: ['phrases interrogatives', 'interrogative', 'interrogatives', 'interrogatif'],
     definition: 'Phrase qui pose une question. À l’écrit, elle se termine par un point d’interrogation.',
-    example: 'Où as-tu rangé ton cahier ?',
+    example: 'Qui chante ?',
   },
   {
     id: 'phrase-imperative',
     word: 'phrase impérative',
     forms: ['phrases impératives', 'impérative', 'impératives', 'impératif', 'injonctif'],
     definition: 'Phrase qui donne un ordre ou un conseil. Le verbe est à l’impératif, souvent sans sujet.',
-    example: 'Range ta chambre.',
+    example: 'Chante avec nous.',
   },
   {
     id: 'forme-negative',
@@ -36,7 +36,28 @@ export const GLOSSAIRE: readonly SubjectTerm[] = [
     forms: ['négative', 'négation', 'phrase négative'],
     definition:
       'Forme d’une phrase qui dit que quelque chose n’est pas, ne se fait pas. Le verbe est entouré de deux mots.',
-    example: 'Le chien ne dort pas.',
+    example: 'Léo ne court pas.',
+  },
+  {
+    id: 'forme-affirmative',
+    word: 'forme affirmative',
+    forms: ['affirmative', 'phrase affirmative'],
+    definition: 'Forme d’une phrase qui n’a pas de négation.',
+    example: 'Léo court.',
+  },
+  {
+    id: 'voyelle',
+    word: 'voyelle',
+    forms: ['voyelles'],
+    definition: 'Les lettres a, e, i, o, u et y.',
+    example: '« arrive » commence par une voyelle.',
+  },
+  {
+    id: 'trait-d-union',
+    word: 'trait d’union',
+    forms: ['traits d’union', "trait d'union"],
+    definition: 'Le petit trait « - » qui relie deux mots.',
+    example: 'Danses-tu ?',
   },
   {
     id: 'forme-exclamative',
@@ -44,7 +65,7 @@ export const GLOSSAIRE: readonly SubjectTerm[] = [
     forms: ['exclamative', 'phrase exclamative'],
     definition:
       'Forme d’une phrase qui exprime une émotion vive (joie, surprise…). Elle se termine par un point d’exclamation.',
-    example: 'Quel beau dessin !',
+    example: 'Quel joli vélo !',
   },
   {
     id: 'inversion',
@@ -52,21 +73,21 @@ export const GLOSSAIRE: readonly SubjectTerm[] = [
     forms: ['inversion', 'sujet inversé'],
     definition:
       'Le sujet se place après le verbe. Dans une question, un trait d’union le relie au verbe s’il est un pronom.',
-    example: 'Tu viens ? devient Viens-tu ?',
+    example: 'Tu danses ? devient Danses-tu ?',
   },
   {
     id: 'est-ce-que',
     word: 'est-ce que',
     forms: ['est-ce qu’', "est-ce qu'", 'est-ce que…'],
     definition: 'Petit groupe de mots placé au début d’une phrase pour en faire une question. Le sujet ne bouge pas.',
-    example: 'Est-ce que tu viens ?',
+    example: 'Est-ce que tu danses ?',
   },
   {
     id: 'intonation',
     word: 'intonation',
     forms: ['intonation ascendante'],
     definition: 'La mélodie de la voix. Pour une question, la voix monte à la fin de la phrase.',
-    example: 'Tu viens ? (la voix monte sur « viens »)',
+    example: 'Tu danses ? (la voix monte sur « danses »)',
   },
   {
     id: 'ponctuation',
