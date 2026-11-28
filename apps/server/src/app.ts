@@ -81,6 +81,7 @@ export type AppConfig = Pick<
   | 'recette'
   | 'passwordMinLength'
   | 'portalLogoutUrl'
+  | 'portalLogin'
 >;
 
 export interface AppDeps {
@@ -206,6 +207,7 @@ export async function buildApp(deps: AppDeps): Promise<App> {
     sessionDays: config.sessionDays,
     recette: config.recette,
     passwordMinLength: config.passwordMinLength,
+    portalLogin: config.portalLogin,
     createStudentProfile: (input, familyId) => profiles.createStudent(input, familyId),
     // `billing` est créé plus bas : résolu à l'appel, jamais à la construction.
     cancelPayments: (familyId) => billing.cancelPending(familyId),
@@ -308,6 +310,7 @@ export async function buildApp(deps: AppDeps): Promise<App> {
             recette: config.recette,
             passwordMinLength: config.passwordMinLength,
             portalLogoutUrl: config.portalLogoutUrl,
+            portalLogin: config.portalLogin,
           },
         ),
       );

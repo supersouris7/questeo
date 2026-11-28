@@ -90,6 +90,8 @@ export const AuthOptionsSchema = z.object({
   recette: z.boolean(),
   /** Déconnexion du portail placé devant la plateforme, à enchaîner après celle de l'appareil. */
   portalLogoutUrl: z.url().optional(),
+  /** Le portail ouvre lui-même la session (`GET /auth/portail`) : pas d'écran de connexion. */
+  portalLogin: z.boolean().optional(),
 });
 
 export const PasswordForgotSchema = z.object({ email: EmailSchema });
@@ -107,6 +109,8 @@ export const MeSchema = z.object({
   parentUntil: z.string().nullable(),
   /** Un code PIN parent est choisi (sinon : mot de passe du compte). */
   hasPin: z.boolean(),
+  /** Ni mot de passe ni code PIN (compte du portail) : la déconnexion ne demande pas le parent. */
+  freeSignOut: z.boolean().optional(),
 });
 export type Me = z.infer<typeof MeSchema>;
 

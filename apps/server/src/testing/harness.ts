@@ -48,6 +48,7 @@ export const testConfig = (overrides: Partial<AppConfig> = {}): AppConfig => ({
   recette: false,
   passwordMinLength: 12,
   portalLogoutUrl: null,
+  portalLogin: false,
   mail: { production: false, brevoApiKey: null, from: 'Épicadémie <noreply@test>' },
   google: null,
   billing: {

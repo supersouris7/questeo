@@ -62,6 +62,23 @@ describe('configuration', () => {
     );
   });
 
+  it('connexion par le portail : désactivée par défaut, recette derrière un proxy seulement', () => {
+    const base = { NODE_ENV: 'production', DATABASE_URL: 'postgres://u:p@h/db' };
+    const recette = { ...base, APP_ENV: 'recette', TRUST_PROXY: '1' };
+    expect(loadConfig(recette).portalLogin).toBe(false);
+    expect(loadConfig({ ...recette, PORTAL_LOGIN: '' }).portalLogin).toBe(false);
+    expect(loadConfig({ ...recette, PORTAL_LOGIN: 'true' }).portalLogin).toBe(true);
+    // Production (explicite ou par défaut), développement ou sans proxy : démarrage refusé.
+    for (const env of [
+      { ...base, ...PROD, TRUST_PROXY: '1' },
+      { ...base, ...PROD, TRUST_PROXY: '1', APP_ENV: 'production' },
+      { TRUST_PROXY: '1' },
+      { ...recette, TRUST_PROXY: '0' },
+    ]) {
+      expect(() => loadConfig({ ...env, PORTAL_LOGIN: 'true' })).toThrow(/PORTAL_LOGIN/);
+    }
+  });
+
   it('Google : actif seulement avec identifiant ET secret ; retour par défaut sous PUBLIC_URL', () => {
     expect(loadConfig({ GOOGLE_CLIENT_ID: 'id-google' }).google).toBeNull();
     const g = loadConfig({

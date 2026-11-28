@@ -92,6 +92,8 @@ export const accounts = pgTable(
     emailVerifiedAt: timestamp('email_verified_at', { withTimezone: true }),
     /** Identifiant stable (`sub`) du compte Google relié. */
     googleSub: text('google_sub'),
+    /** Première connexion par le portail (recette) ; nul : jamais. L'identité du portail est l'e-mail. */
+    portalLinkedAt: timestamp('portal_linked_at', { withTimezone: true }),
     createdAt: createdAt(),
   },
   (t) => [

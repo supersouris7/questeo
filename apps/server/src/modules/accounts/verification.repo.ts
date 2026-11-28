@@ -2,7 +2,7 @@ import { and, eq, isNull } from 'drizzle-orm';
 import type { Executor } from '../../db/client.ts';
 import { accounts, emailVerifications } from '../../db/schema.ts';
 
-/** Accès à la validation d'adresse e-mail et au rattachement Google (module « comptes »). */
+/** Accès à la validation d'adresse e-mail et au rattachements Google et portail (module « comptes »). */
 export function verificationRepo(db: Executor) {
   return {
     async findByGoogleSub(sub: string) {
@@ -15,6 +15,14 @@ export function verificationRepo(db: Executor) {
       await db
         .update(accounts)
         .set({ googleSub: sub, emailVerifiedAt: verifiedAt, ...(resetPassword ? { passwordHash: null } : {}) })
+        .where(eq(accounts.id, accountId));
+    },
+
+    /** Relie le compte au portail de connexion ; `resetPassword` : comme pour Google. */
+    async linkPortal(accountId: string, at: Date, verifiedAt: Date, resetPassword: boolean): Promise<void> {
+      await db
+        .update(accounts)
+        .set({ portalLinkedAt: at, emailVerifiedAt: verifiedAt, ...(resetPassword ? { passwordHash: null } : {}) })
         .where(eq(accounts.id, accountId));
     },
 

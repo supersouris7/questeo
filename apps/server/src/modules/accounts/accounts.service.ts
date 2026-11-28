@@ -43,6 +43,8 @@ export interface AccountsDeps {
   readonly recette: boolean;
   /** Longueur minimale d'un nouveau mot de passe. */
   readonly passwordMinLength: number;
+  /** Connexion directe par le portail (recette uniquement). */
+  readonly portalLogin: boolean;
   /** Crée le profil de l'élève (module « profils ») dans la famille autonome. */
   readonly createStudentProfile: (
     input: Pick<StudentSignup, 'name' | 'avatar' | 'grade'>,
@@ -62,11 +64,22 @@ export function createAccountsService({
   sessionDays,
   recette,
   passwordMinLength,
+  portalLogin,
   createStudentProfile,
   cancelPayments,
 }: AccountsDeps) {
   const repo = accountsRepo(db);
   const later = (ms: number) => new Date(clock.now().getTime() + ms);
+
+  /**
+   * Compte du portail sans mot de passe ni code PIN : aucun secret ne peut ouvrir l'Espace parent, la
+   * déconnexion (suivie de celle du portail) ne peut donc pas l'exiger.
+   */
+  const withoutParentSecret = (a: {
+    passwordHash?: string | null;
+    parentPinHash?: string | null;
+    portalLinkedAt?: Date | null;
+  }): boolean => portalLogin && Boolean(a.portalLinkedAt) && !a.passwordHash && !a.parentPinHash;
 
   const meOf = (
     a: {
@@ -75,7 +88,9 @@ export function createAccountsService({
       role: Me['account']['role'];
       familyId: string;
       autonomous: boolean;
+      passwordHash?: string | null;
       parentPinHash?: string | null;
+      portalLinkedAt?: Date | null;
     },
     parentUntil: Date | null,
   ): Me => {
@@ -86,6 +101,7 @@ export function createAccountsService({
       parent,
       parentUntil: parent ? parentUntil.toISOString() : null,
       hasPin: Boolean(a.parentPinHash),
+      ...(withoutParentSecret(a) ? { freeSignOut: true } : {}),
     };
   };
 
@@ -151,7 +167,8 @@ export function createAccountsService({
       const hash = tokenHash(token);
       const now = clock.now();
       const s = await repo.findSession(hash, now);
-      if (s && !s.autonomous && !(s.parentUntil && s.parentUntil > now)) {
+      const locked = s && !s.autonomous && !(s.parentUntil && s.parentUntil > now);
+      if (locked && !withoutParentSecret((await repo.findById(s.accountId)) ?? {})) {
         throw new AppError('FORBIDDEN', 'Action réservée au parent : saisis le code parent pour déconnecter.');
       }
       await repo.deleteSession(hash);

@@ -86,6 +86,10 @@ export interface FakeApiOptions {
   readonly pin?: string | null;
   /** Déconnexion du portail placé devant la plateforme. */
   readonly portalLogoutUrl?: string;
+  /** Le portail annonce la connexion directe. */
+  readonly portalLogin?: boolean;
+  /** Compte sans mot de passe ni code PIN (portail). */
+  readonly freeSignOut?: boolean;
   readonly profiles?: readonly Profile[];
   readonly skills?: readonly SkillProgress[];
   readonly inventory?: Inventory;
@@ -216,6 +220,7 @@ function authHandlers(options: FakeApiOptions) {
       parent: session.parent,
       parentUntil: session.parent ? '2099-01-01T00:00:00.000Z' : null,
       hasPin: session.pin !== null,
+      ...(options.freeSignOut ? { freeSignOut: true } : {}),
     };
   };
   const requireParent = () => {
@@ -250,6 +255,7 @@ function authHandlers(options: FakeApiOptions) {
       recette: options.recette ?? false,
       passwordMinLength: options.passwordMinLength ?? (options.recette ? 8 : 12),
       ...(options.portalLogoutUrl ? { portalLogoutUrl: options.portalLogoutUrl } : {}),
+      ...(options.portalLogin ? { portalLogin: true } : {}),
     }),
     signupStudent: ({ body }) => {
       const b = body as { name: string; avatar: unknown; grade: string };
@@ -271,7 +277,7 @@ function authHandlers(options: FakeApiOptions) {
       return me();
     },
     logout: () => {
-      if (session.loggedIn && session.email !== null) requireParent();
+      if (session.loggedIn && session.email !== null && !options.freeSignOut) requireParent();
       session.loggedIn = false;
       return null;
     },

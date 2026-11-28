@@ -37,6 +37,32 @@ Internet ──443/80──▶ Caddy (service système)  ──127.0.0.1:3000─
 - **Alertes** (Gotify) : bannissement (au plus une alerte par heure) et application muette
   (contrôle toutes les 5 min, alerte à la 2ᵉ vérification en échec, puis message « rétablie »).
 
+## Connexion directe par le portail (facultatif)
+
+Quand un portail d'authentification unique protège la recette (Caddy `forward_auth`), la personne qu'il a
+authentifiée entre directement dans son compte famille : `PORTAL_LOGIN=true` dans le `.env` (avec
+`APP_ENV=recette` et `TRUST_PROXY=1`), et `PORTAL_LOGOUT_URL` pour que « Se déconnecter » quitte aussi le
+portail. Sans compte à cette adresse, il est créé (sans mot de passe) puis le profil est demandé.
+
+L'application croit l'en-tête `Remote-Email` ; avant d'activer le réglage, vérifier :
+
+- le proxy contrôle l'accès à **toutes** les routes et recopie `Remote-Email` depuis la réponse du portail
+  (`copy_headers Remote-User Remote-Groups Remote-Email Remote-Name`), ce qui écrase la valeur envoyée par
+  le client ; retirer en plus ces en-têtes à l'entrée (`request_header -Remote-*`, avant `forward_auth`)
+  protège des versions du proxy qui garderaient un en-tête absent de la réponse du portail ;
+- le port de l'application n'écoute que sur la machine (`compose.override.yml`) : le fichier `compose.yml`
+  du dépôt, seul, le publie sur toutes les interfaces ;
+- les autres comptes de la machine qui atteignent ce port local peuvent forger l'en-tête : ne l'activer que
+  sur une machine dont les utilisateurs sont de confiance.
+
+En second rempart, le serveur refuse l'en-tête d'une connexion venue d'une adresse publique.
+
+Limites d'un compte créé par le portail : sans mot de passe, il ne peut ni choisir de code PIN ni rouvrir
+l'Espace parent après les 10 minutes qui suivent la connexion (se déconnecter puis revenir par le portail) ;
+« Se déconnecter » n'y demande donc aucun code. Un compte existant de même adresse est réutilisé tel quel
+(mot de passe et code conservés) : l'inscription de recette ne vérifiant pas les adresses, la personne qui a
+créé ce compte garde son accès.
+
 ## Déployer
 
 Depuis l'atelier, après chaque fusion sur `main` (une fois l'image `unstable` publiée) :

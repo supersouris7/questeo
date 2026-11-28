@@ -47,7 +47,7 @@ export interface VerificationDeps {
 
 /**
  * Ouverture d'un compte avec e-mail : adresse validée par un lien (jeton à usage unique, haché en
- * base) ou Google. Voir docs/operations/configuration.md.
+ * base), Google ou, en recette, le portail de connexion. Voir docs/operations/configuration.md.
  */
 export function createVerificationService({
   db,
@@ -179,6 +179,34 @@ export function createVerificationService({
         accountsRepo(tx).createFamilyAccount(identity.email, null, { verifiedAt: now, googleSub: identity.sub }),
       );
       return { ...(await open({ ...account, autonomous: false })), created: true };
+    },
+
+    /**
+     * Connexion par le portail (e-mail déjà authentifié par lui, donc tenu pour vérifié). Même e-mail =
+     * même compte ; comme pour Google, un compte jamais validé perd son mot de passe.
+     */
+    async loginWithPortal(email: string): Promise<OpenedSession & { created: boolean }> {
+      const now = clock.now();
+      const existing = await repo.findByEmail(email);
+      if (!existing) {
+        const account = await db.transaction((tx) =>
+          accountsRepo(tx).createFamilyAccount(email, null, { verifiedAt: now, portalLinkedAt: now }),
+        );
+        return { ...(await open({ ...account, autonomous: false })), created: true };
+      }
+      if (!existing.portalLinkedAt) {
+        await db.transaction(async (tx) => {
+          await verificationRepo(tx).linkPortal(
+            existing.id,
+            now,
+            existing.emailVerifiedAt ?? now,
+            !existing.emailVerifiedAt,
+          );
+          await verificationRepo(tx).deleteVerificationsOf(existing.id);
+        });
+      }
+      const linked = await repo.findById(existing.id);
+      return { ...(await open({ ...(linked ?? existing), autonomous: false })), created: false };
     },
   };
 }

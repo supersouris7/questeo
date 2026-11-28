@@ -4,6 +4,7 @@ import { route } from '../../core/http/route.ts';
 import { readCookie, serializeCookie, SESSION_COOKIE } from '../../core/auth/cookies.ts';
 import type { Google } from '../../core/auth/google.ts';
 import { googleRoutes } from './google.routes.ts';
+import { portalRoutes } from './portal.routes.ts';
 import type { AccountsService, OpenedSession } from './accounts.service.ts';
 
 /**
@@ -14,7 +15,7 @@ export function accountsRoutes(
   service: AccountsService,
   cookie: { secure: boolean; maxAgeDays: number; rateLimitMax: number },
   google: Google | null = null,
-  options: { recette: boolean; passwordMinLength: number; portalLogoutUrl?: string | null } = {
+  options: { recette: boolean; passwordMinLength: number; portalLogoutUrl?: string | null; portalLogin?: boolean } = {
     recette: false,
     passwordMinLength: 12,
   },
@@ -51,7 +52,10 @@ export function accountsRoutes(
       passwordMinLength: options.passwordMinLength,
       recette: options.recette,
       ...(options.portalLogoutUrl ? { portalLogoutUrl: options.portalLogoutUrl } : {}),
+      ...(options.portalLogin ? { portalLogin: true } : {}),
     }));
+    // Désactivé : la route n'existe pas (404).
+    if (options.portalLogin) portalRoutes(app, { service, strict: STRICT, setSession });
     if (google) googleRoutes(app, { service, google, secure: cookie.secure, strict: STRICT, setSession });
     route(
       app,
