@@ -144,23 +144,23 @@ type Typed = 'but' | 'however';
 const TYPED: readonly Typed[] = ['but', 'however'];
 
 /**
- * Saisie sans traduction (niveaux 4 et 5) : le mot se déduit de la phrase anglaise seule. Pas de comparaison ici
- * (« but » y serait juste aussi) ; on garde les phrases où la seconde idée contrarie un souhait ou un goût
- * (« whereas » n’y convient pas).
+ * Saisie sans traduction (niveaux 4 et 5) : le mot se déduit de la phrase anglaise seule. Pour « but », la seconde
+ * partie est une question ou une consigne : « whereas » ne peut pas l’introduire.
  */
-const ALONE_STARTS: readonly string[] = ['I am tired,', 'She wants to play,', 'I want to come,', 'I like this song,'];
 export const ALONE_POOL: Readonly<Record<Typed, readonly Joined[]>> = {
-  but: CONCESSIONS.filter((j) => ALONE_STARTS.includes(j.start)),
+  but: [
+    joined('I know you are busy,', 'can you help me?'),
+    joined('I like your idea,', 'can we talk about it later?'),
+    joined('I want to help you,', 'what can I do?'),
+    joined('You can play now,', 'be home at six.'),
+    joined('You can use my pen,', 'please give it back.'),
+    joined('Go to the park,', 'don’t come home late.'),
+    joined('You can watch the film,', 'go to bed after it.'),
+  ],
   however: HOWEVERS,
 };
 const ALONE_WHY: Readonly<Record<Typed, readonly TextTrap[]>> = {
-  but: [
-    {
-      text: 'whereas',
-      why: 'whereas veut dire « alors que » : ici, la seconde idée contrarie la première (« mais »).',
-    },
-    { text: 'however', why: 'however suit un point ou un point-virgule : ici, une virgule précède le trou.' },
-  ],
+  but: [{ text: 'however', why: 'however suit un point ou un point-virgule : ici, une virgule précède le trou.' }],
   however: [
     { text: 'but', why: 'Après ce point-virgule, avec une virgule derrière le trou, le cours emploie however.' },
     {
@@ -662,6 +662,7 @@ export const QUALITIES: readonly Quality[] = [
 ];
 const french = (q: Quality, d: Degree) => `${q.fr} ${DEGREE_FR[d]} ${q.frAdj}.`;
 const english = (q: Quality, d: Degree) => `${d} ${d === 'much' ? q.comparative : q.adj}`;
+const base = (q: Quality) => `Mot de base : ${q.adj}.`;
 const DEGREES = ['very', 'too', 'much'] as const;
 const DEGREE_FR: Readonly<Record<Degree, string>> = { very: 'très', too: 'trop', much: 'beaucoup plus' };
 
@@ -727,10 +728,10 @@ function degreeTranslate(rng: Rng): QuestionDraft {
   const extra =
     d === 'much' ? [{ text: `much more ${q.adj}`, why: `Le comparatif attendu est ${q.comparative}.` }] : [];
   return {
-    prompt: `Écris la fin en anglais avec un adverbe de degré du cours : « ${french(q, d)} » → ${q.en} … .`,
+    prompt: `Écris la fin en anglais avec un adverbe de degré du cours : « ${french(q, d)} » → ${q.en} … . ${base(q)}`,
     answer: typed(accepted),
     traps: textTraps(accepted, [...wrong, ...(q.comparative.startsWith('more') ? [] : extra)]),
-    hint: `Le mot de base est « ${q.adj} ». Choisis le petit mot, puis la bonne forme.`,
+    hint: 'Choisis d’abord le petit mot, puis la bonne forme du mot de base.',
     steps: [
       'Trouve le sens : très, trop ou beaucoup plus.',
       'Pour « beaucoup plus », utilise la forme de comparaison de la qualité.',
@@ -750,7 +751,7 @@ function degreeDocument(rng: Rng): QuestionDraft {
       'Lis le journal et sa traduction. Écris dans chaque trou, en anglais, l’adverbe de degré et la qualité à la bonne forme.',
     figure: document(
       `Diary of ${name}`,
-      rows.flatMap((r, i) => [`${r.q.en} (${i + 1}).`, `= ${french(r.q, r.d)} Mot de base : ${r.q.adj}.`]),
+      rows.flatMap((r, i) => [`${r.q.en} (${i + 1}).`, `= ${french(r.q, r.d)} ${base(r.q)}`]),
     ),
     answer: { kind: 'cloze', parts: numbered(rows.length), blanks: blanksOf(answers.map((a) => [a])) },
     hint: 'Pour chaque trou, relis la phrase française, puis le mot de base.',

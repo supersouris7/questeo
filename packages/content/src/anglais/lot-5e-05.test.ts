@@ -226,7 +226,7 @@ describe('anglais 5e : groupe nominal et pronoms, relier et situer', () => {
   it('contraste : la phrase d’exemple du mémo n’est reprise dans aucun item', () => {
     const memo = getSkill('a5-contraste')!.lesson.memo.join(' ');
     const [, start, end] = /Exemple : « (.+;) however, (.+) »/.exec(memo)!;
-    for (const j of [...CONCESSIONS, ...COMPARISONS, ...HOWEVERS]) {
+    for (const j of [...CONCESSIONS, ...COMPARISONS, ...HOWEVERS, ...ALONE_POOL.but]) {
       expect(j.start).not.toBe(start);
       expect(j.end).not.toBe(end);
     }
@@ -305,6 +305,25 @@ describe('anglais 5e : groupe nominal et pronoms, relier et situer', () => {
         return degree;
       });
       expect([...answers].sort(), q.prompt).toEqual(['much', 'much', 'too', 'very']);
+    }
+  });
+
+  it('contraste : « but » saisi seulement devant une question ou une consigne, sans piège sur « whereas »', () => {
+    for (const j of ALONE_POOL.but) expect(j.end).toMatch(/\?$|^(be|please|don’t|go) /);
+    for (const q of questions('a5-contraste', 4)) {
+      if (q.answer.kind !== 'text' || q.answer.accepted[0] !== 'but') continue;
+      expect(
+        ALONE_POOL.but.some((j) => q.prompt.includes(j.end)),
+        q.prompt,
+      ).toBe(true);
+      expect(JSON.stringify(q.traps)).not.toContain('whereas');
+    }
+  });
+
+  it('degré : le mot de base est donné dès l’énoncé du niveau 4, comme au niveau 5', () => {
+    for (const q of questions('a5-intensite', 4)) {
+      const quality = QUALITIES.find((x) => q.prompt.includes(`→ ${x.en} …`))!;
+      expect(q.prompt).toContain(`Mot de base : ${quality.adj}.`);
     }
   });
 

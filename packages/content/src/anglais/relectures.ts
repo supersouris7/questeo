@@ -134,4 +134,6 @@ export const RELECTURES: readonly Relecture[] = [
   { skillId: 'a5-voc-nature', version: 1, lot: 'an-5e-07', date: '2026-11-27', verdict: 'ok' },
   { skillId: 'a5-personnages-celebres', version: 1, lot: 'an-5e-07', date: '2026-11-27', verdict: 'ok' },
   { skillId: 'a5-reperes-axes', version: 1, lot: 'an-5e-07', date: '2026-11-27', verdict: 'ok' },
+  { skillId: 'a5-quantifieurs', version: 1, lot: 'an-5e-05', date: '2026-11-28', verdict: 'ok' },
+  { skillId: 'a5-antonymes', version: 1, lot: 'an-5e-05', date: '2026-11-28', verdict: 'ok' },
 ];
