@@ -262,6 +262,94 @@ export const TRIPLETS: readonly Triplet[] = [
   },
 ];
 
+/** Court message dont une seule phrase déclarative contient « tu » (phrases sans signe final). */
+export interface Message {
+  readonly titre: string;
+  readonly information: string;
+  readonly question: string;
+  readonly ordre: string;
+  readonly declarative: string;
+  /** La phrase déclarative devenue un ordre. */
+  readonly imperative: string;
+  /** Écriture fautive fréquente de cet ordre. */
+  readonly faute: string;
+  /** Ce que devient le verbe dans l’ordre. */
+  readonly verbe: string;
+}
+
+export const MESSAGES: readonly Message[] = [
+  {
+    titre: 'Un mot sur le frigo',
+    information: 'Le goûter est dans le placard',
+    question: 'Tu as très faim',
+    ordre: 'Lave tes mains',
+    declarative: 'Tu arroses les plantes',
+    imperative: 'Arrose les plantes',
+    faute: 'Arroses les plantes',
+    verbe: 'Ici, « arroses » perd son « s » : « Arrose ».',
+  },
+  {
+    titre: 'Un message de Mamie',
+    information: 'Nous arrivons dimanche midi',
+    question: 'Tu viens à la gare',
+    ordre: 'Pense à ton parapluie',
+    declarative: 'Tu prépares la table',
+    imperative: 'Prépare la table',
+    faute: 'Prépares la table',
+    verbe: 'Ici, « prépares » perd son « s » : « Prépare ».',
+  },
+  {
+    titre: 'Avant la sortie',
+    information: 'Le car part tôt',
+    question: 'Tu as ton billet',
+    ordre: 'Mets tes baskets',
+    declarative: 'Tu prends une gourde',
+    imperative: 'Prends une gourde',
+    faute: 'Prend une gourde',
+    verbe: 'Ici, « prends » garde son « s ».',
+  },
+  {
+    titre: 'Un mot pour le voisin',
+    information: 'Notre chat reste à la maison',
+    question: 'Tu es libre lundi',
+    ordre: 'Sonne avant d’entrer',
+    declarative: 'Tu remplis sa gamelle',
+    imperative: 'Remplis sa gamelle',
+    faute: 'Rempli sa gamelle',
+    verbe: 'Ici, « remplis » garde son « s ».',
+  },
+  {
+    titre: 'Pour l’exposé',
+    information: 'L’exposé est vendredi',
+    question: 'Tu as des photos',
+    ordre: 'Découpe les images',
+    declarative: 'Tu écris le titre',
+    imperative: 'Écris le titre',
+    faute: 'Écri le titre',
+    verbe: 'Ici, « écris » garde son « s ».',
+  },
+  {
+    titre: 'Dans le jardin',
+    information: 'Les fraises sont mûres',
+    question: 'Tu veux un panier',
+    ordre: 'Ouvre la barrière',
+    declarative: 'Tu laves les fraises',
+    imperative: 'Lave les fraises',
+    faute: 'Laves les fraises',
+    verbe: 'Ici, « laves » perd son « s » : « Lave ».',
+  },
+  {
+    titre: 'Un message de Papa',
+    information: 'La séance commence à cinq heures',
+    question: 'Tu viens avec ton ami',
+    ordre: 'Mets un pull',
+    declarative: 'Tu attends devant l’école',
+    imperative: 'Attends devant l’école',
+    faute: 'Attend devant l’école',
+    verbe: 'Ici, « attends » garde son « s ».',
+  },
+];
+
 /** Une question posée de trois façons. */
 export interface Question3 {
   readonly declarative: string;

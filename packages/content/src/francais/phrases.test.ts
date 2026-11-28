@@ -14,10 +14,12 @@ import {
   INFORMATIONS,
   INTENTIONS,
   INTERROGATIVES,
+  MESSAGES,
   NEGATIONS,
   OUBLIS,
   QUESTIONS,
   QUESTIONS_LUES,
+  TRIPLETS,
 } from './phrases.donnees.ts';
 import { FRANCAIS_CHAPTERS } from './index.ts';
 
@@ -84,20 +86,28 @@ describe('francais cm1 — types et formes de phrases', () => {
   const lines = (q: Question) => (q.figure?.kind === 'document' ? q.figure.lines : []);
   const typed = (q: Question, text: string) => check(q, { kind: 'text', text }).correct;
 
-  it('types, niveau 5 : les trois nombres correspondent aux lignes du texte', () => {
-    const count = (q: Question, bank: readonly string[]) =>
-      lines(q).filter((l) => bank.includes(l.replace(/ ?[.?!]$/, ''))).length;
+  it('types, niveau 5 : une phrase nouvelle à trouver dans un message puis à transformer', () => {
+    const vues = [...DECLARATIVES, ...INTERROGATIVES, ...IMPERATIVES].concat(
+      TRIPLETS.flatMap((t) => [t.declarative, t.interrogative, t.imperative]),
+    );
+    const seen = new Set<string>();
     each('fcm1-types-phrases', 5, (q) => {
-      const answers = [DECLARATIVES, INTERROGATIVES, IMPERATIVES].map((bank) => String(count(q, bank)));
-      expect(answers.reduce((sum, n) => sum + Number(n), 0)).toBe(lines(q).length);
-      if (q.answer.kind !== 'cloze') throw new Error('texte à trous attendu');
-      // Les nombres se choisissent : le clavier de l’application n’a pas de chiffres.
-      q.answer.blanks.forEach((b, i) => expect(b.mode === 'list' && b.options).toContain(answers[i]));
-      expect(check(q, { kind: 'cloze', answers }).correct).toBe(true);
-      expect(q.steps.at(-1)).toContain(
-        `déclaratives ${answers[0]}, interrogatives ${answers[1]}, impératives ${answers[2]}`,
-      );
+      const found = MESSAGES.filter((m) => lines(q).includes(`${m.declarative}.`));
+      expect(found).toHaveLength(1);
+      const m = found[0]!;
+      seen.add(m.titre);
+      for (const l of lines(q)) expect(vues).not.toContain(l.replace(/ ?[.?!]$/, ''));
+      // Une seule phrase déclarative contient « tu » : la réponse est unique.
+      expect(lines(q).filter((l) => l.endsWith('.') && /\btu\b/i.test(l))).toEqual([`${m.declarative}.`]);
+      // Le signe ne suffit pas : trois phrases finissent par un point.
+      expect(lines(q).filter((l) => l.endsWith('.'))).toHaveLength(3);
+      expect(q.prompt).not.toContain(m.declarative);
+      expect(typed(q, m.imperative)).toBe(true);
+      for (const wrong of [m.declarative, m.question, m.ordre, m.faute, m.information])
+        expect(typed(q, wrong), wrong).toBe(false);
     });
+    expect(seen.size).toBe(MESSAGES.length);
+    expect(MESSAGES.length).toBeGreaterThanOrEqual(6);
   });
 
   it('types, niveau 4 : le verbe change, l’énoncé ne contient pas la réponse', () => {
@@ -269,5 +279,58 @@ describe('francais cm1 — types et formes de phrases', () => {
       expect(typed(q, 'Elle écoute jamais la radio.')).toBe(false);
     });
     expect(seen.size).toBe(3);
+  });
+
+  /** Ce que l’élève peut taper : ni point ni point d’interrogation sur le clavier. */
+  const keys = (text: string) => text.replace(/ ?[.?!]$/, '');
+  const why = (q: Question, text: string) => check(q, { kind: 'text', text }).why;
+
+  it('types, niveaux 4 et 5 : chaque accent peut être omis séparément', () => {
+    const seen = new Set<string>();
+    each('fcm1-types-phrases', 4, (q) => {
+      if (!q.prompt.includes('Tu écoutes')) return;
+      seen.add('ecoute');
+      for (const text of ['Écoute la maîtresse', 'Écoute la maitresse', 'Ecoute la maîtresse', 'Ecoute la maitresse'])
+        for (const sign of ['', '.', ' !', '!']) expect(typed(q, `${text}${sign}`), `${text}${sign}`).toBe(true);
+      expect(why(q, 'Ecoutes la maîtresse')).toContain('perd son « s »');
+    });
+    each('fcm1-types-phrases', 5, (q) => {
+      if (!lines(q).includes('Tu attends devant l’école.')) return;
+      seen.add('ecole');
+      expect(typed(q, "Attends devant l'ecole")).toBe(true);
+    });
+    expect(seen.size).toBe(2);
+  });
+
+  it('types, niveaux 3 à 5 : chaque piège est tapable au clavier et déclenche son explication', () => {
+    const typable = (text: string) => /^[\p{L} \-’]+$/u.test(text);
+    for (const level of [3, 4, 5] as const)
+      each('fcm1-types-phrases', level, (q) => {
+        expect(q.traps.length).toBeGreaterThanOrEqual(2);
+        for (const t of q.traps) {
+          if (!('text' in t)) throw new Error('piège écrit attendu');
+          const saisie = keys(t.text);
+          expect(typable(saisie), t.text).toBe(true);
+          expect(typed(q, saisie), saisie).toBe(false);
+          expect(why(q, saisie), saisie).toBe(t.why);
+        }
+      });
+  });
+
+  it('types, niveau 3 : chaque écriture d’un mauvais type reçoit une explication', () => {
+    each('fcm1-types-phrases', 3, (q) => {
+      const accepted = q.answer.kind === 'text' ? q.answer.accepted : [];
+      for (const [adjectif, type] of [
+        ['déclaratif', 'déclarative'],
+        ['interrogatif', 'interrogative'],
+        ['injonctif', 'impérative'],
+      ] as const) {
+        if (accepted.includes(type)) continue;
+        for (const a of [adjectif, type, `phrase ${type}`, `de type ${adjectif}`])
+          expect(why(q, a), a).toContain(`pas une phrase ${type}`);
+      }
+      if (!accepted.includes('impérative'))
+        for (const a of ['injonctive', 'phrase injonctive']) expect(why(q, a), a).toContain('phrase impérative');
+    });
   });
 });
