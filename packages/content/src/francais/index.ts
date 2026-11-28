@@ -26,6 +26,7 @@ import { F6_PRONOMS_GN } from './pronoms-gn-6e.ts';
 import { F6_PHRASE_COMPLEXE } from './phrase-complexe-6e.ts';
 import { F6_CONJUGAISON } from './conjugaison-6e.ts';
 import { F6_ACCORDS } from './accords-6e.ts';
+import { F6_VOCABULAIRE } from './vocabulaire-6e.ts';
 
 /** Français : chapitres publiés (ADR 0034). Le lot de contenu ajoute ses chapitres ici, sans toucher à catalog.ts. */
 export const FRANCAIS_CHAPTERS: readonly Chapter[] = [
@@ -244,5 +245,13 @@ export const FRANCAIS_CHAPTERS: readonly Chapter[] = [
     domain: 'orthographe',
     title: 'Les accords',
     skills: F6_ACCORDS,
+  },
+  {
+    id: 'f6-vocabulaire',
+    subject: 'francais',
+    grade: '6e',
+    domain: 'vocabulaire',
+    title: 'Vocabulaire',
+    skills: F6_VOCABULAIRE,
   },
 ];
