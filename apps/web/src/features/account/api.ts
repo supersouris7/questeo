@@ -58,6 +58,8 @@ export const logout = () => request(api.logout);
 export const confirmParent = (password: string) => request(api.confirmParent, { body: { password } });
 export const unlockParentPin = (pin: string) => request(api.unlockParentPin, { body: { pin } });
 export const setParentPin = (password: string, pin: string) => request(api.setParentPin, { body: { password, pin } });
+/** Premier code d'un compte sans mot de passe (portail). */
+export const chooseParentPin = (pin: string) => request(api.setParentPin, { body: { pin } });
 export const exportFamily = () => request(api.exportFamily);
 export const deleteFamily = (input: FamilyDelete) => request(api.deleteFamily, { body: input });
 export const lockParent = () => request(api.lockParent);

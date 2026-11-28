@@ -40,7 +40,8 @@ export type Login = z.infer<typeof LoginSchema>;
 export const PasswordConfirmSchema = z.object({ password: z.string().min(1).max(200) });
 /** Code PIN de l'Espace parent : 4 chiffres. */
 export const ParentPinSchema = z.string().regex(/^\d{4}$/, 'Le code PIN a 4 chiffres.');
-export const ParentPinSetSchema = z.object({ password: z.string().min(1).max(200), pin: ParentPinSchema });
+/** `password` n'est omis que pour le premier code d'un compte sans mot de passe (`Me.needsPin`). */
+export const ParentPinSetSchema = z.object({ password: z.string().min(1).max(200).optional(), pin: ParentPinSchema });
 export const ParentPinUnlockSchema = z.object({ pin: ParentPinSchema });
 /** Mot à saisir pour confirmer la suppression du compte famille. */
 export const DELETE_CONFIRMATION = 'SUPPRIMER';
@@ -109,8 +110,10 @@ export const MeSchema = z.object({
   parentUntil: z.string().nullable(),
   /** Un code PIN parent est choisi (sinon : mot de passe du compte). */
   hasPin: z.boolean(),
-  /** Ni mot de passe ni code PIN (compte du portail) : la déconnexion ne demande pas le parent. */
-  freeSignOut: z.boolean().optional(),
+  /** Compte du portail sans mot de passe ni code PIN : le code est à choisir avant de continuer. */
+  needsPin: z.boolean().optional(),
+  /** Compte du portail sans mot de passe : seul le code PIN ouvre l'Espace parent. */
+  noPassword: z.boolean().optional(),
 });
 export type Me = z.infer<typeof MeSchema>;
 

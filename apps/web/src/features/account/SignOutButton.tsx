@@ -11,8 +11,7 @@ import { holdPortalLogin } from './portalLogin.ts';
 /**
  * Le code est redemandé à chaque fois : l'Espace parent est d'abord reverrouillé, puis le serveur
  * refuse la déconnexion tant qu'il n'est pas rouvert. Les progrès restent sur le serveur. Si un
- * portail de connexion protège la plateforme, on en sort aussi. Seule exception au code : un compte
- * du portail, sans mot de passe ni code PIN.
+ * portail de connexion protège la plateforme, on en sort aussi.
  */
 export function SignOutButton() {
   const navigate = useNavigate();
@@ -34,11 +33,8 @@ export function SignOutButton() {
   const signOut = async () => {
     setBusy(true);
     try {
-      const me = await lockParent();
-      setMe(me);
-      // Compte sans aucun secret parent (portail) : rien à demander.
-      if (me.freeSignOut) await leave();
-      else await withParent(leave);
+      setMe(await lockParent());
+      await withParent(leave);
     } catch {
       showToast('Déconnexion impossible : vérifie la connexion.');
     } finally {

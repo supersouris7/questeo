@@ -20,6 +20,9 @@ export const WRONG_PASSWORD_AT_VERIFICATION =
 
 export const ADDRESS_TAKEN = 'Cette adresse a déjà un compte : connectez-vous.';
 
+export const PORTAL_UNVERIFIED_ACCOUNT =
+  'Un compte existe déjà avec cette adresse : connecte-toi avec ton mot de passe.';
+
 /** Longueur minimale d'un nouveau mot de passe (réglable : PASSWORD_MIN_LENGTH). */
 export function checkPasswordLength(password: string, min: number): void {
   if (password.length < min)
@@ -35,14 +38,11 @@ export interface VerificationDeps {
   readonly recette: boolean;
   /** Longueur minimale d'un nouveau mot de passe. */
   readonly passwordMinLength: number;
-  /** Ouvre la session d'appareil d'un compte. */
-  readonly open: (a: {
-    id: string;
-    email: string | null;
-    role: 'parent';
-    familyId: string;
-    autonomous: boolean;
-  }) => Promise<OpenedSession>;
+  /** Ouvre la session d'appareil d'un compte ; `locked` : Espace parent fermé. */
+  readonly open: (
+    a: { id: string; email: string | null; role: 'parent'; familyId: string; autonomous: boolean },
+    options?: { locked?: boolean },
+  ) => Promise<OpenedSession>;
 }
 
 /**
@@ -182,8 +182,9 @@ export function createVerificationService({
     },
 
     /**
-     * Connexion par le portail (e-mail déjà authentifié par lui, donc tenu pour vérifié). Même e-mail =
-     * même compte ; comme pour Google, un compte jamais validé perd son mot de passe.
+     * Connexion par le portail (e-mail déjà authentifié par lui). Un compte existant de même adresse n'est
+     * relié que si celle-ci est déjà vérifiée ; sinon refus, sans rien modifier. La session portail se
+     * rouvre sans rien saisir : l'Espace parent n'est ouvert que tant qu'aucun secret parent n'existe.
      */
     async loginWithPortal(email: string): Promise<OpenedSession & { created: boolean }> {
       const now = clock.now();
@@ -194,19 +195,11 @@ export function createVerificationService({
         );
         return { ...(await open({ ...account, autonomous: false })), created: true };
       }
-      if (!existing.portalLinkedAt) {
-        await db.transaction(async (tx) => {
-          await verificationRepo(tx).linkPortal(
-            existing.id,
-            now,
-            existing.emailVerifiedAt ?? now,
-            !existing.emailVerifiedAt,
-          );
-          await verificationRepo(tx).deleteVerificationsOf(existing.id);
-        });
-      }
-      const linked = await repo.findById(existing.id);
-      return { ...(await open({ ...(linked ?? existing), autonomous: false })), created: false };
+      if (!existing.emailVerifiedAt) throw new AppError('EMAIL_NOT_VERIFIED', PORTAL_UNVERIFIED_ACCOUNT);
+      if (!existing.portalLinkedAt) await vRepo.linkPortal(existing.id, now);
+      const account = { ...existing, portalLinkedAt: existing.portalLinkedAt ?? now, autonomous: false };
+      const locked = Boolean(existing.passwordHash ?? existing.parentPinHash);
+      return { ...(await open(account, { locked })), created: false };
     },
   };
 }

@@ -82,6 +82,7 @@ export type AppConfig = Pick<
   | 'passwordMinLength'
   | 'portalLogoutUrl'
   | 'portalLogin'
+  | 'portalProxySecret'
 >;
 
 export interface AppDeps {
@@ -310,7 +311,7 @@ export async function buildApp(deps: AppDeps): Promise<App> {
             recette: config.recette,
             passwordMinLength: config.passwordMinLength,
             portalLogoutUrl: config.portalLogoutUrl,
-            portalLogin: config.portalLogin,
+            portalSecret: config.portalLogin ? config.portalProxySecret : null,
           },
         ),
       );

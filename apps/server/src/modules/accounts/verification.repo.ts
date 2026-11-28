@@ -18,12 +18,9 @@ export function verificationRepo(db: Executor) {
         .where(eq(accounts.id, accountId));
     },
 
-    /** Relie le compte au portail de connexion ; `resetPassword` : comme pour Google. */
-    async linkPortal(accountId: string, at: Date, verifiedAt: Date, resetPassword: boolean): Promise<void> {
-      await db
-        .update(accounts)
-        .set({ portalLinkedAt: at, emailVerifiedAt: verifiedAt, ...(resetPassword ? { passwordHash: null } : {}) })
-        .where(eq(accounts.id, accountId));
+    /** Relie un compte (adresse déjà vérifiée) au portail de connexion. */
+    async linkPortal(accountId: string, at: Date): Promise<void> {
+      await db.update(accounts).set({ portalLinkedAt: at }).where(eq(accounts.id, accountId));
     },
 
     async markEmailVerified(accountId: string, at: Date): Promise<void> {

@@ -101,6 +101,8 @@ const EnvSchema = z.object({
    * uniquement (APP_ENV=recette), derrière un proxy de confiance (TRUST_PROXY ≥ 1).
    */
   PORTAL_LOGIN: bool,
+  /** Secret que le proxy du portail ajoute à chaque requête (X-Portal-Secret) ; exigé avec PORTAL_LOGIN. */
+  PORTAL_PROXY_SECRET: z.string().min(32).optional(),
   /** Expéditeur des e-mails : `adresse@domaine` ou `Nom <adresse@domaine>`. */
   MAIL_FROM: z.string().min(3).max(200).optional(),
   /** « Continuer avec Google » (OpenID Connect) ; bouton masqué si l'une des deux manque. */
@@ -150,6 +152,7 @@ export interface ServerConfig {
   readonly portalLogoutUrl: string | null;
   /** Connexion directe par le portail (recette uniquement ; faux par défaut). */
   readonly portalLogin: boolean;
+  readonly portalProxySecret: string | null;
   readonly passwordMinLength: number;
   readonly google: GoogleConfig | null;
 }
@@ -231,15 +234,20 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
 /** Accès à la plateforme : mode de test, longueur des mots de passe, portail de connexion devant. */
 function accessConfig(
   e: z.infer<typeof EnvSchema>,
-): Pick<ServerConfig, 'recette' | 'passwordMinLength' | 'portalLogoutUrl' | 'portalLogin'> {
+): Pick<ServerConfig, 'recette' | 'passwordMinLength' | 'portalLogoutUrl' | 'portalLogin' | 'portalProxySecret'> {
   const recette = e.APP_ENV === 'recette';
   const portalLogin = e.PORTAL_LOGIN ?? false;
   // L'identité vient d'en-têtes HTTP : jamais en production, jamais sans proxy devant.
   if (portalLogin && (!recette || e.TRUST_PROXY < 1)) {
     throw new ConfigError('PORTAL_LOGIN est réservé à la recette : APP_ENV=recette et TRUST_PROXY ≥ 1');
   }
+  const portalProxySecret = e.PORTAL_PROXY_SECRET ?? null;
+  if (portalLogin && !portalProxySecret) {
+    throw new ConfigError('PORTAL_LOGIN exige PORTAL_PROXY_SECRET (32 caractères minimum, posé aussi par le proxy)');
+  }
   return {
     portalLogin,
+    portalProxySecret,
     recette,
     passwordMinLength: e.PASSWORD_MIN_LENGTH ?? (recette ? 8 : 12),
     portalLogoutUrl: e.PORTAL_LOGOUT_URL ?? null,

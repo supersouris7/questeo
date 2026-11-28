@@ -3,16 +3,21 @@
  * directement dans son compte, sans écran de connexion.
  */
 import { useEffect, useState, type ReactNode } from 'react';
+import { useSearchParams } from 'react-router';
 import { ApiError } from '../../shared/api/client.ts';
 import { ScreenSkeleton } from '../../shared/ui/Skeleton.tsx';
 import { useAuthOptions, useMe } from './api.ts';
 import { claimPortalLogin, PORTAL_LOGIN_URL } from './portalLogin.ts';
 
-/** Écran de connexion : remplacé par le départ vers le portail s'il est annoncé et sans session. */
+/**
+ * Écran de connexion : remplacé par le départ vers le portail s'il est annoncé et sans session, sauf
+ * quand le portail vient de refuser (`?erreur=…`) : le message reste affiché.
+ */
 export function PortalSignIn({ children }: { readonly children: ReactNode }) {
   const { data, isPending } = useAuthOptions();
+  const refused = useSearchParams()[0].has('erreur');
   if (isPending) return <ScreenSkeleton />;
-  return data?.portalLogin ? <NoSession>{children}</NoSession> : children;
+  return data?.portalLogin && !refused ? <NoSession>{children}</NoSession> : children;
 }
 
 function NoSession({ children }: { readonly children: ReactNode }) {

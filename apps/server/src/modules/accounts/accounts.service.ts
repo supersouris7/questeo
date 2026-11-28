@@ -71,15 +71,13 @@ export function createAccountsService({
   const repo = accountsRepo(db);
   const later = (ms: number) => new Date(clock.now().getTime() + ms);
 
-  /**
-   * Compte du portail sans mot de passe ni code PIN : aucun secret ne peut ouvrir l'Espace parent, la
-   * déconnexion (suivie de celle du portail) ne peut donc pas l'exiger.
-   */
-  const withoutParentSecret = (a: {
-    passwordHash?: string | null;
-    parentPinHash?: string | null;
-    portalLinkedAt?: Date | null;
-  }): boolean => portalLogin && Boolean(a.portalLinkedAt) && !a.passwordHash && !a.parentPinHash;
+  /** Compte du portail sans mot de passe : seul le code PIN peut ouvrir son Espace parent. */
+  const portalOnly = (a: { passwordHash?: string | null; portalLinkedAt?: Date | null }): boolean =>
+    Boolean(a.portalLinkedAt) && !a.passwordHash;
+
+  /** Premier passage d'un tel compte : le code parent se choisit sans mot de passe. */
+  const needsPin = (a: Parameters<typeof portalOnly>[0] & { parentPinHash?: string | null }): boolean =>
+    portalLogin && portalOnly(a) && !a.parentPinHash;
 
   const meOf = (
     a: {
@@ -101,15 +99,16 @@ export function createAccountsService({
       parent,
       parentUntil: parent ? parentUntil.toISOString() : null,
       hasPin: Boolean(a.parentPinHash),
-      ...(withoutParentSecret(a) ? { freeSignOut: true } : {}),
+      ...(needsPin(a) ? { needsPin: true } : {}),
+      ...(portalOnly(a) ? { noPassword: true } : {}),
     };
   };
 
-  /** Ouvre une session d'appareil. Après saisie du mot de passe, le parent est déverrouillé. */
-  const open = async (a: Parameters<typeof meOf>[0]): Promise<OpenedSession> => {
+  /** Ouvre une session d'appareil. Après saisie du mot de passe, le parent est déverrouillé (sauf `locked`). */
+  const open = async (a: Parameters<typeof meOf>[0], { locked = false } = {}): Promise<OpenedSession> => {
     const token = newToken();
     // Élève autonome : jamais de déverrouillage parent (aucun parent n'est rattaché).
-    const parentUntil = a.autonomous ? null : later(PARENT_UNLOCK_MINUTES * MINUTE);
+    const parentUntil = a.autonomous || locked ? null : later(PARENT_UNLOCK_MINUTES * MINUTE);
     await repo.createSession({
       tokenHash: tokenHash(token),
       accountId: a.id,
@@ -167,8 +166,7 @@ export function createAccountsService({
       const hash = tokenHash(token);
       const now = clock.now();
       const s = await repo.findSession(hash, now);
-      const locked = s && !s.autonomous && !(s.parentUntil && s.parentUntil > now);
-      if (locked && !withoutParentSecret((await repo.findById(s.accountId)) ?? {})) {
+      if (s && !s.autonomous && !(s.parentUntil && s.parentUntil > now)) {
         throw new AppError('FORBIDDEN', 'Action réservée au parent : saisis le code parent pour déconnecter.');
       }
       await repo.deleteSession(hash);
@@ -211,11 +209,18 @@ export function createAccountsService({
       );
     },
 
-    /** Choisit ou change le code PIN parent : le mot de passe du compte est demandé. */
-    async setParentPin(actor: Actor, password: string, pin: string): Promise<Me> {
+    /**
+     * Choisit ou change le code PIN parent : le mot de passe du compte est demandé. Seul le premier code
+     * d'un compte du portail s'en passe, dans la session que le portail vient d'ouvrir.
+     */
+    async setParentPin(actor: Actor, password: string | undefined, pin: string): Promise<Me> {
       refuseAutonomous(actor);
       const account = await repo.findById(actor.accountId);
-      if (!account || !(await passwordMatches(account.passwordHash, password))) {
+      if (account && needsPin(account)) {
+        if (!actor.parent) {
+          throw new AppError('FORBIDDEN', 'Reconnecte-toi par le portail pour choisir le code parent.');
+        }
+      } else if (!account || !(await passwordMatches(account.passwordHash, password ?? ''))) {
         throw new AppError('UNAUTHORIZED', 'Mot de passe incorrect.');
       }
       await repo.setParentPin(account.id, await hashPassword(pin));
