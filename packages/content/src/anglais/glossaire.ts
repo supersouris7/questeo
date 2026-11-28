@@ -1117,4 +1117,11 @@ export const GLOSSAIRE: readonly SubjectTerm[] = [
     definition: '« À mon avis » : annonce un avis.',
     example: 'In my opinion, it’s great.',
   },
+  {
+    id: 'portrait',
+    word: 'portrait',
+    forms: ['portrait', 'portraits'],
+    definition: 'Une description d’une personne, en mots ou en image.',
+    example: '« He was born in Kentucky » fait partie d’un portrait.',
+  },
 ];
