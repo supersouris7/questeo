@@ -111,17 +111,55 @@ describe('histoire cm1 — Se repérer dans le temps', () => {
       );
       expect(marks.size).toBeGreaterThanOrEqual(4);
       expect(marks.size).toBeLessThanOrEqual(6);
-      if (q.answer.kind === 'text') {
-        expect(q.prompt).not.toMatch(/\d/);
-        const [from, to] = [...q.prompt.matchAll(/« ([^»]+) »/g)].map((m) => marks.get(m[1]!)!);
-        expect(q.answer.accepted, q.prompt).toContain(String(to! - from!));
-      } else if (q.answer.kind === 'choice') {
-        const year = marks.get(q.answer.options[q.answer.correct]!)!;
-        expect(q.prompt).toContain(`au ${toRoman(centuryOf(year))}e siècle`);
-        const years = [...marks.values()];
-        expect(years).toContain((centuryOf(year) - 1) * 100);
-        expect(years.filter((y) => centuryOf(y) === centuryOf(year))).toHaveLength(1);
+      // Jamais de proposition au niveau 5 : le niveau 4 est déjà en saisie.
+      if (q.answer.kind !== 'text') throw new Error('saisie attendue');
+      expect(q.prompt).not.toMatch(/\d/);
+      const years = [...marks.values()];
+      const named = [...q.prompt.matchAll(/« ([^»]+) »/g)].map((m) => marks.get(m[1]!)!);
+      const roman = /repère du ([IVX]+)e siècle/.exec(q.prompt)?.[1];
+      if (roman) {
+        const c = Array.from({ length: 21 }, (_, i) => i + 1).find((n) => toRoman(n) === roman)!;
+        const inCentury = years.filter((y) => centuryOf(y) === c);
+        expect(inCentury, q.prompt).toHaveLength(1);
+        expect(years).toContain((c - 1) * 100);
+        named.push(inCentury[0]!);
       }
+      expect(named, q.prompt).toHaveLength(2);
+      const gap = Math.abs(named[1]! - named[0]!);
+      expect(gap).toBeGreaterThan(0);
+      expect(q.answer.accepted[0], q.prompt).toBe(String(gap));
+    }
+  });
+
+  it('frise : une durée écrite en lettres est acceptée comme en chiffres', () => {
+    const words: Record<number, string> = { 3: 'trois', 4: 'quatre', 6: 'six', 9: 'neuf' };
+    const seen = new Set<string>();
+    for (const q of questions('hcm1-frise-chronologique', 4)) {
+      if (q.answer.kind !== 'text') throw new Error('saisie attendue');
+      const n = Number(q.answer.accepted[0]);
+      const unit = q.prompt.includes('siècles') ? 'siècles' : 'ans';
+      const word = words[unit === 'ans' ? n / 100 : n];
+      if (!word) continue;
+      const text = unit === 'ans' ? `${word} cents ans` : `${word} siècles`;
+      expect(check(q, { kind: 'text', text }).correct, `${q.prompt} ${text}`).toBe(true);
+      seen.add(unit);
+    }
+    expect([...seen].sort()).toEqual(['ans', 'siècles']);
+    // Au niveau 5 la durée est quelconque : les trois orthographes d’un nombre composé sont admises.
+    const tens = ['vingt', 'trente', 'quarante', 'cinquante', 'soixante'];
+    const units = ['deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf'];
+    const long = questions('hcm1-frise-chronologique', 5).find(
+      (q) => q.answer.kind === 'text' && /^4[2-6][2-9]$/.test(q.answer.accepted[0]!),
+    )!;
+    if (long.answer.kind !== 'text') throw new Error('saisie attendue');
+    const [, t, u] = long.answer.accepted[0]!;
+    const end = [tens[Number(t) - 2]!, units[Number(u) - 2]!];
+    for (const text of [
+      `quatre-cent-${end.join('-')} ans`,
+      `quatre cent ${end.join('-')} ans`,
+      `quatre cent ${end.join(' ')}`,
+    ]) {
+      expect(check(long, { kind: 'text', text }).correct, text).toBe(true);
     }
   });
 

@@ -1,6 +1,7 @@
 import type { Level, QuestionDraft, Rich, Sens, Skill, Trap } from '../types.ts';
 import type { Rng } from '../rng.ts';
 import { choice, type Option } from '../build.ts';
+import { inWords } from '../maths/cm/outils.ts';
 import { shuffled } from './kit.ts';
 import { PREUVES, type Preuve } from './se-reperer-sources.ts';
 
@@ -699,11 +700,21 @@ const frise3: Generator = (rng) => {
   };
 };
 
-/** Écritures justes d’une durée : le nombre seul, avec l’unité, avec ou sans espace des milliers. */
+/** Un nombre en lettres : orthographe de 1990 (traits d’union), traditionnelle, ou sans trait d’union. */
+function nombreEnLettres(n: number): string[] {
+  const word = inWords(n);
+  const classique = word
+    .replace(/-(cents?|mille)(?=-|$)/g, ' $1')
+    .replace(/\b(cents?|mille)-/g, '$1 ')
+    .replace(/-et-/g, ' et ');
+  return [...new Set([word, classique, word.replaceAll('-', ' ')])];
+}
+
+/** Écritures justes d’une durée : le nombre en chiffres ou en lettres, seul ou avec l’unité. */
 function ecrituresDuree(n: number, unite: 'ans' | 'siècles'): string[] {
-  const numbers = [String(n), ...(n >= 1000 ? [`${Math.floor(n / 1000)} ${String(n % 1000).padStart(3, '0')}`] : [])];
+  const digits = [String(n), ...(n >= 1000 ? [`${Math.floor(n / 1000)} ${String(n % 1000).padStart(3, '0')}`] : [])];
   const units = unite === 'ans' ? ['ans', 'années', 'annees'] : ['siècles', 'siecles'];
-  return numbers.flatMap((x) => [x, ...units.map((u) => `${x} ${u}`)]);
+  return [...digits, ...nombreEnLettres(n)].flatMap((x) => [x, ...units.map((u) => `${x} ${u}`)]);
 }
 
 const frise4: Generator = (rng) => {
@@ -812,44 +823,47 @@ function friseDuree(rng: Rng): QuestionDraft {
   return { ...q, figure, targetSeconds: 70 };
 }
 
-/** Niveau 5 : retrouver le repère d’un siècle, avec une année en 00 juste à la frontière. */
+/** Niveau 5, en trois temps : trouver un repère par son siècle (année en 00 à la frontière), puis la durée. */
 function friseSiecle(rng: Rng): QuestionDraft {
   const c = rng.int(8, 17);
   const autres = rng.shuffle([8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18].filter((x) => x < c - 1 || x > c + 1));
   const siecles = [c - 1, c, c + 1, ...autres.slice(0, rng.int(1, 3))];
-  // L’année en 00 du siècle d’avant est toujours là ; la réponse finit parfois aussi par 00.
+  // L’année en 00 du siècle d’avant est toujours là ; le repère cherché finit parfois aussi par 00.
   const rondes = c === 8 || rng.int(0, 1) === 0 ? [c - 1, c] : [c - 1];
   const { marques, figure } = friseVillage(rng, siecles, rondes);
   const cible = at(
     marques.filter((m) => centuryOf(m.year) === c),
     0,
   );
-  return {
-    prompt: `Lis la frise, puis réponds. Quel repère se place au ${siecle(c)} siècle ?`,
-    figure,
-    ...choice(
-      rng,
-      cible.text,
-      marques
-        .filter((m) => m !== cible)
-        .map((m) => ({
-          label: m.text,
-          why:
-            m.year % 100 === 0
-              ? `${m.year} finit par 00 : cette année termine le ${siecle(centuryOf(m.year))} siècle.`
-              : `Ce repère date de ${m.year}, au ${siecle(centuryOf(m.year))} siècle.`,
-        })),
-    ),
-    hint: 'Écris la première et la dernière année du siècle, puis cherche sur la frise.',
-    steps: [
-      `Écris les limites : ${bornes(c)}.`,
-      cible.year % 100 === 0
-        ? `Garde l’année ${cible.year} : elle termine ce siècle.`
-        : `Garde l’année ${cible.year} : elle est entre ces limites.`,
-      retiens(cible.text),
+  const frontiere = at(
+    marques.filter((m) => m.year === (c - 1) * 100),
+    0,
+  );
+  const autre = rng.pick(marques.filter((m) => m !== cible && m !== frontiere));
+  const [ancien, recent] = autre.year < cible.year ? [autre, cible] : [cible, autre];
+  const gap = recent.year - ancien.year;
+  const piegeFrontiere = Math.abs(autre.year - frontiere.year);
+  const q = saisie(
+    `Lis la frise, puis réponds. Combien d’années séparent « ${autre.text} » et le repère du ${siecle(c)} siècle ?`,
+    ecrituresDuree(gap, 'ans'),
+    [
+      [
+        String(piegeFrontiere),
+        `Tu as pris l’année ${frontiere.year} : finissant par 00, elle termine le ${siecle(c - 1)} siècle.`,
+      ],
+      [String(autre.year + cible.year), 'Tu as ajouté les dates. Pour une durée, on soustrait.'],
+      [String(gap + 100), 'Un siècle de trop : refais la soustraction.'],
+      [String(gap + 10), 'Dix ans de trop : attention à la retenue.'],
     ],
-    targetSeconds: 70,
-  };
+    'Trouve d’abord le repère du siècle demandé, avec les limites du siècle.',
+    [
+      `Écris les limites : ${bornes(c)}.`,
+      `Lis les deux années sur la frise : ${cible.year} et ${autre.year}.`,
+      `Soustrais : ${recent.year} − ${ancien.year} = ${gap}.`,
+      retiens(`${gap} ans`),
+    ],
+  );
+  return { ...q, figure, targetSeconds: 90 };
 }
 
 const frise5: Generator = (rng) => (rng.int(0, 1) === 0 ? friseDuree(rng) : friseSiecle(rng));
@@ -1085,9 +1099,9 @@ const jc5: Generator = (rng) => {
     ]),
     credit: CREDIT,
   };
-  const depart = `Pars de la seule date donnée : ${base}. Pour « avant », ajoute.`;
-  const calculAvant = `Calcule pour ${avant.nom} : ${base} + ${d1} = ${avant.year}.`;
-  const calculChaine = `Calcule pour ${chaine.nom} : ${avant.year} + ${d3} = ${chaine.year}.`;
+  const depart = `Pars de la seule date donnée : ${base}.`;
+  const calculAvant = `Ajoute pour « avant » : ${base} + ${d1} = ${avant.year} (${avant.nom}).`;
+  const calculChaine = `Ajoute encore : ${avant.year} + ${d3} = ${chaine.year} (${chaine.nom}).`;
   const hint = 'Pars de la seule date donnée. Avant J.-C., les années se comptent à rebours.';
   const mode = rng.pick(['annee', 'siecle', 'ranger'] as const);
   if (mode === 'ranger') {
@@ -1103,7 +1117,7 @@ const jc5: Generator = (rng) => {
       ...q,
       steps: [
         depart,
-        `Ajoute : ${base} + ${d1} = ${avant.year}, puis ${avant.year} + ${d3} = ${chaine.year}.`,
+        `Ajoute pour « avant » : ${base} + ${d1} = ${avant.year}, puis ${avant.year} + ${d3} = ${chaine.year}.`,
         `Enlève pour « après » : ${base} − ${d2} = ${apres.year}.`,
         `Range du plus grand nombre au plus petit : **${[...tous]
           .sort((a, b) => b.year - a.year)
@@ -1131,7 +1145,7 @@ const jc5: Generator = (rng) => {
   }
   const target = rng.pick([avant, chaine]);
   const c = centuryOf(target.year);
-  const calcul = target === chaine ? `Calcule : ${base} + ${d1} + ${d3} = ${target.year}.` : calculAvant;
+  const calcul = target === chaine ? `Ajoute pour « avant » : ${base} + ${d1} + ${d3} = ${target.year}.` : calculAvant;
   const q = saisie(
     `Lis le texte, puis réponds. Dans quel siècle avant J.-C. a-t-on fabriqué ${target.nom} ?`,
     siecleAvantForms(c),
