@@ -211,6 +211,13 @@
       "when": 1796200000000,
       "tag": "0029_sentiment_de_capacite",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1796300000000,
+      "tag": "0030_connexion_portail",
+      "breakpoints": true
     }
   ]
 }

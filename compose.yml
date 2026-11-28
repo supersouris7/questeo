@@ -67,6 +67,10 @@ services:
       # E-mails de validation (Brevo) et connexion Google : voir docs/operations/configuration.md.
       # Production : BREVO_API_KEY obligatoire ; recette sans fournisseur : APP_ENV=recette.
       APP_ENV: ${APP_ENV:-}
+      # Portail de connexion placé devant la plateforme : déconnexion, et connexion directe (recette seule).
+      PORTAL_LOGOUT_URL: ${PORTAL_LOGOUT_URL:-}
+      PORTAL_LOGIN: ${PORTAL_LOGIN:-}
+      PORTAL_PROXY_SECRET: ${PORTAL_PROXY_SECRET:-}
       BREVO_API_KEY: ${BREVO_API_KEY:-}
       MAIL_FROM: ${MAIL_FROM:-}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}

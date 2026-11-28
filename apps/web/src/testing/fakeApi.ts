@@ -86,6 +86,10 @@ export interface FakeApiOptions {
   readonly pin?: string | null;
   /** Déconnexion du portail placé devant la plateforme. */
   readonly portalLogoutUrl?: string;
+  /** Le portail annonce la connexion directe. */
+  readonly portalLogin?: boolean;
+  /** Compte sans mot de passe (portail) ; sans `pin`, le code parent reste à choisir. */
+  readonly noPassword?: boolean;
   readonly profiles?: readonly Profile[];
   readonly skills?: readonly SkillProgress[];
   readonly inventory?: Inventory;
@@ -216,6 +220,8 @@ function authHandlers(options: FakeApiOptions) {
       parent: session.parent,
       parentUntil: session.parent ? '2099-01-01T00:00:00.000Z' : null,
       hasPin: session.pin !== null,
+      ...(options.noPassword ? { noPassword: true } : {}),
+      ...(options.noPassword && session.pin === null ? { needsPin: true } : {}),
     };
   };
   const requireParent = () => {
@@ -250,6 +256,7 @@ function authHandlers(options: FakeApiOptions) {
       recette: options.recette ?? false,
       passwordMinLength: options.passwordMinLength ?? (options.recette ? 8 : 12),
       ...(options.portalLogoutUrl ? { portalLogoutUrl: options.portalLogoutUrl } : {}),
+      ...(options.portalLogin ? { portalLogin: true } : {}),
     }),
     signupStudent: ({ body }) => {
       const b = body as { name: string; avatar: unknown; grade: string };
@@ -293,8 +300,9 @@ function authHandlers(options: FakeApiOptions) {
       return null;
     },
     setParentPin: ({ body }) => {
-      const b = body as { password: string; pin: string };
-      if (b.password !== FAKE_PASSWORD) throw new FakeError(401, 'UNAUTHORIZED', 'Mot de passe incorrect.');
+      const b = body as { password?: string; pin: string };
+      if (options.noPassword && session.pin === null) requireParent();
+      else if (b.password !== FAKE_PASSWORD) throw new FakeError(401, 'UNAUTHORIZED', 'Mot de passe incorrect.');
       session.pin = b.pin;
       return me();
     },
