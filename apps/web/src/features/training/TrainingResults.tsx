@@ -28,6 +28,7 @@ export function Results({
   sessionId,
   missed,
   gender,
+  adult,
   chapterId,
   epreuve = false,
   exitTo,
@@ -40,6 +41,8 @@ export function Results({
   sessionId: string | null;
   missed: readonly Missed[];
   gender: Gender | null;
+  /** Profil adulte. */
+  adult: boolean;
   chapterId: string;
   /** Partie = Épreuve du chapitre. */
   epreuve?: boolean;
@@ -66,7 +69,7 @@ export function Results({
         {failedEpreuve && (
           <EpreuveAdvice weakest={summary.epreuve?.weakestSkillId ?? null} chapterId={chapterId} onGo={onExit} />
         )}
-        {sessionId && <FeelingQuestion sessionId={sessionId} />}
+        {sessionId && <FeelingQuestion sessionId={sessionId} adult={adult} />}
         <GameButton icon="icons-navigation-retry" onClick={onReplay}>
           Rejouer
         </GameButton>

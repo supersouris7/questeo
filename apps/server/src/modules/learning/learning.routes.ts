@@ -15,6 +15,10 @@ export function learningRoutes(service: LearningService, owns: Ownership) {
       await owns.profile(actor(), params.id);
       return service.journey(params.id);
     });
+    route(app, api.parentWeek, async ({ params, actor }) => {
+      await owns.profile(actor(), params.id);
+      return service.parentWeek(params.id);
+    });
     route(app, api.badges, async ({ params, actor }) => {
       await owns.profile(actor(), params.id);
       return service.badges(params.id);

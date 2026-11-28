@@ -48,6 +48,7 @@ et les options écartées. Une ADR acceptée ne se modifie pas : une nouvelle AD
 | [0036](0036-roles-d-administration-oidc.md)      | Rôles d'administration et connexion de l'équipe (OpenID Connect)                              | Acceptée            |
 | [0037](0037-aide-sans-penalite.md)               | Aide sans pénalité, médaille de diamant, aucune comparaison entre enfants                     | Acceptée            |
 | [0038](0038-progres-personnel-et-sens.md)        | Progrès personnel, sens des matières, ressenti de fin de séance                               | Acceptée            |
+| [0039](0039-espace-parent-effort.md)             | Espace parent : la semaine d’abord, ressenti agrégé, conseil par règles                       | Acceptée            |
 | [0040](0040-duel-et-quiz-tv.md)                  | Duel à distance et Quiz TV : salles temps réel, invités sans compte                           | Proposée            |
 
 ## Modèle

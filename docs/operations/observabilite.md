@@ -18,6 +18,8 @@ JSON sur la sortie standard (pino). Champs utiles : `level`, `time`, `requestId`
 | `epicademie_http_request_duration_seconds` | durée par `method`, `route`, `status`                          |
 | `epicademie_online_players`                | joueurs connectés en temps réel                                |
 | `epicademie_open_arenas`                   | arènes ouvertes                                                |
+| `epicademie_open_rooms`                    | salles à code ouvertes                                         |
+| `epicademie_room_code_failures_total`      | entrées en salle refusées (hausse : recherche de codes)        |
 | `epicademie_finished_games_total{kind}`    | parties terminées (entraînement, boss)                         |
 | `epicademie_errors_total{source}`          | erreurs signalées (serveur, navigateur, temps réel, processus) |
 | `epicademie_rewards_total{currency}`       | pièces et rubis distribués en fin de partie                    |

@@ -61,7 +61,7 @@ import {
   StudiedChapterViewSchema,
   StudiedChaptersUpdateSchema,
 } from '../evaluation.ts';
-import { BadgeProgressSchema, JourneySchema, LearningReportSchema } from '../learning.ts';
+import { BadgeProgressSchema, JourneySchema, LearningReportSchema, ParentWeekSchema } from '../learning.ts';
 import {
   AccountDetailSchema,
   AccountPageSchema,
@@ -573,6 +573,17 @@ export const api = {
     status: 200,
     params: IdParamsSchema,
     response: JourneySchema,
+  }),
+
+  parentWeek: endpoint({
+    method: 'GET',
+    path: '/profiles/:id/parent-week',
+    tag: 'suivi',
+    summary: 'Espace parent : efforts de la semaine, ressenti agrégé et conseil pour un enfant',
+    access: 'parent',
+    status: 200,
+    params: IdParamsSchema,
+    response: ParentWeekSchema,
   }),
 
   badges: endpoint({

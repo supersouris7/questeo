@@ -71,7 +71,7 @@ test('Espace parent : navigation stable, chaque chemin reste dans l’espace, un
   await expect(page).toHaveURL(/\/$/);
 });
 
-test('Page d’un enfant épurée : synthèse, cartes matière, À réviser ; aucune création d’entraînement', async ({
+test('Page d’un enfant épurée : synthèse, cartes matière, notions à renforcer ; aucune création d’entraînement', async ({
   page,
 }) => {
   test.setTimeout(60_000);
@@ -87,7 +87,7 @@ test('Page d’un enfant épurée : synthèse, cartes matière, À réviser ; au
   await page.goto('/parent');
   await page.getByRole('link', { name: /Voir les progrès de/ }).click();
   await expect(page.getByRole('heading', { name: 'Avancement' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'À réviser' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Notions à renforcer' })).toBeVisible();
   for (const gone of ['Recommander un entraînement', 'Lancer la séance', 'Bilan de la semaine'])
     await expect(page.getByText(gone)).toHaveCount(0);
 });

@@ -87,4 +87,12 @@ export const RELECTURES: readonly Relecture[] = [
   { skillId: 'h3-guerre-froide', version: 1, lot: 'hi-3e-03', date: '2026-11-26', verdict: 'ok' },
   { skillId: 'h3-projet-europeen', version: 1, lot: 'hi-3e-03', date: '2026-11-26', verdict: 'ok' },
   { skillId: 'h3-apres-1989', version: 1, lot: 'hi-3e-03', date: '2026-11-26', verdict: 'ok' },
+  { skillId: 'hcm1-traces', version: 2, lot: 'rp-hi-cm1-01', date: '2026-11-27', verdict: 'ok' },
+  { skillId: 'hcm1-heritages', version: 2, lot: 'rp-hi-cm1-01', date: '2026-11-27', verdict: 'ok' },
+  { skillId: 'hcm1-mouvements', version: 2, lot: 'rp-hi-cm1-01', date: '2026-11-27', verdict: 'ok' },
+  { skillId: 'hcm1-clovis-charlemagne', version: 2, lot: 'rp-hi-cm1-01', date: '2026-11-27', verdict: 'ok' },
+  { skillId: 'hcm1-louis-ix', version: 2, lot: 'rp-hi-cm1-02', date: '2026-11-27', verdict: 'ok' },
+  { skillId: 'hcm1-francois-ier', version: 2, lot: 'rp-hi-cm1-02', date: '2026-11-27', verdict: 'ok' },
+  { skillId: 'hcm1-henri-iv', version: 2, lot: 'rp-hi-cm1-02', date: '2026-11-27', verdict: 'ok' },
+  { skillId: 'hcm1-louis-xiv', version: 2, lot: 'rp-hi-cm1-02', date: '2026-11-27', verdict: 'ok' },
 ];

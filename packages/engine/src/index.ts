@@ -8,6 +8,7 @@ export * from './loot.ts';
 export * from './arena.ts';
 export * from './learning.ts';
 export * from './journey.ts';
+export * from './parent-week.ts';
 export * from './adaptive.ts';
 export * from './badges.ts';
 export * from './economy.ts';

@@ -12,6 +12,8 @@ export * from './subjects.ts';
 export * from './grades.ts';
 export * from './battle.ts';
 export * from './realtime.ts';
+export * from './party.ts';
+export * from './duel.ts';
 export * from './random.ts';
 export * from './learning.ts';
 export * from './pedagogy.ts';

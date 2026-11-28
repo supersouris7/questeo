@@ -4,13 +4,16 @@ import { collectDefaultMetrics, Counter, Gauge, Histogram, Registry } from '@pro
 /**
  * Métriques Prometheus exposées sur /api/metrics : requêtes HTTP (nombre, durée, statut par
  * route), métriques du processus Node (mémoire, boucle d'événements) et jauges métier (joueurs
- * connectés, arènes ouvertes). Un registre par application (pas de registre global : plusieurs
+ * connectés, arènes et salles ouvertes). Un registre par application (pas de registre global : plusieurs
  * applications peuvent coexister dans les tests).
  */
 export interface Metrics {
   readonly registry: Registry;
   readonly onlinePlayers: Gauge;
   readonly openArenas: Gauge;
+  readonly openRooms: Gauge;
+  /** Codes de salle refusés (alerte : recherche de codes). */
+  readonly roomCodeFailures: Counter;
   readonly finishedGames: Counter<'kind'>;
   readonly realtimeDisconnects: Counter;
   /** Erreurs signalées, par source (serveur, navigateur, temps réel, processus). */
@@ -35,6 +38,16 @@ export function createMetrics(): Metrics {
     openArenas: new Gauge({
       name: 'epicademie_open_arenas',
       help: 'Arènes ouvertes (salon ou partie)',
+      registers: [registry],
+    }),
+    openRooms: new Gauge({
+      name: 'epicademie_open_rooms',
+      help: 'Salles à code ouvertes',
+      registers: [registry],
+    }),
+    roomCodeFailures: new Counter({
+      name: 'epicademie_room_code_failures_total',
+      help: 'Entrées en salle refusées (code faux, salle fermée, jeton périmé)',
       registers: [registry],
     }),
     realtimeDisconnects: new Counter({

@@ -68,7 +68,7 @@ export const ADMIN_COOKIE = '__Host-epicademie_admin';
 const ADMIN_ROUTES = `${API_PREFIX}/admin/`;
 
 /** Comparaison en temps constant (empreintes de même longueur). */
-function sameSecret(given: string, expected: string): boolean {
+export function sameSecret(given: string, expected: string): boolean {
   const digest = (v: string) => createHash('sha256').update(v).digest();
   return timingSafeEqual(digest(given), digest(expected));
 }

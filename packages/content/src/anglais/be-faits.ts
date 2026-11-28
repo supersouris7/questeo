@@ -1,7 +1,8 @@
 /**
  * Anglais CM1, « Be et possessifs » (lot an-cm1-02) : données citées.
  * Chaque fait porte l'identifiant de sa source (registre `sources.ts`) et une citation exacte du texte consulté
- * le 24/11/2026 (copies d'archive web.archive.org des pages du British Council ; programme du cycle 3 d'Éduscol).
+ * le 27/11/2026 (copies d'archive web.archive.org des pages du British Council et du programme de langues vivantes
+ * du cours moyen, arrêté du 26 février 2026).
  * La page « personal pronouns » du British Council refuse les robots : les pronoms sujets sont cités dans le
  * tableau « Subject / Object / Possessive adjective » de la page « Possessives: adjectives ».
  */
@@ -52,7 +53,7 @@ export const SUBJECTS: readonly Subject[] = [
   { en: 'Yuna', pro: 'she' },
   { en: 'Emir', pro: 'he' },
   { en: 'Paul', pro: 'he' },
-  { en: 'the cat', pro: 'it' },
+  { en: 'the bike', pro: 'it' },
   { en: 'the book', pro: 'it' },
   { en: 'Ana and Emir', pro: 'they' },
   { en: 'Paul and Yuna', pro: 'they' },
@@ -60,22 +61,25 @@ export const SUBJECTS: readonly Subject[] = [
   { en: 'Ana and I', pro: 'we' },
 ];
 
-/** Propriétaires pour les adjectifs possessifs : `fr` complète « appartient à … ». */
+/** Propriétaires pour les adjectifs possessifs : `fr` complète « La chose est … ». */
 export interface Owner {
-  /** Complète « La maison appartient … » (préposition comprise). */
+  /** Complète « La maison est … » (préposition comprise). */
   readonly fr: string;
   /** Le propriétaire, sans préposition (pour les explications). */
   readonly who: string;
   readonly pro: Pronoun;
+  /** Chose imposée (sinon, une de `THINGS`). */
+  readonly thing?: { readonly en: string; readonly fr: string };
 }
 export const OWNERS: readonly Owner[] = [
   { fr: 'à moi', who: 'moi', pro: 'I' },
   { fr: 'à toi', who: 'toi', pro: 'you' },
   { fr: 'à Emir', who: 'Emir', pro: 'he' },
   { fr: 'à Ana', who: 'Ana', pro: 'she' },
-  { fr: 'au chat', who: 'le chat', pro: 'it' },
-  { fr: 'à Emir et moi', who: 'Emir et moi', pro: 'we' },
-  { fr: 'à Ana et Emir', who: 'Ana et Emir', pro: 'they' },
+  // Une chose (et non un animal, qu’on peut aussi appeler « he » ou « she ») : « its » est la seule réponse.
+  { fr: 'celle du bus', who: 'le bus', pro: 'it', thing: { en: 'door', fr: 'La porte' } },
+  { fr: 'à Emir et à moi', who: 'Emir et moi', pro: 'we' },
+  { fr: 'à Ana et à Emir', who: 'Ana et Emir', pro: 'they' },
 ];
 
 /** Objets possédés : mot anglais et mot français (avec son article). */
@@ -90,22 +94,22 @@ export const THINGS: readonly { readonly en: string; readonly fr: string }[] = [
 export const FAITS: readonly Fait[] = [
   {
     id: 'programme-grammaire',
-    sourceId: 'cycle3-2020',
+    sourceId: 'lve-cm-2026',
+    quote: 'Reconnaitre quelques structures et formes grammaticales simples appartenant à un répertoire mémorisé.',
+    claim: 'Le programme du CM1 fait reconnaître quelques formes grammaticales simples.',
+  },
+  {
+    id: 'programme-pronoms',
+    sourceId: 'lve-cm-2026',
     quote:
-      'Grammaire : contrôle limité de quelques structures et formes grammaticales simples appartenant à un répertoire mémorisé.',
-    claim: 'Le programme demande de contrôler quelques formes grammaticales simples (be, pronoms, possessifs).',
+      'Déterminer de qui on parle en s’appuyant sur les pronoms personnels sujets, compléments et les adjectifs possessifs.',
+    claim: 'Les pronoms sujets et les adjectifs possessifs sont au programme du CM1.',
   },
   {
     id: 'programme-questions',
-    sourceId: 'cycle3-2020',
-    quote: 'Poser des questions simples.',
-    claim: 'Poser des questions simples est une compétence de « Réagir et dialoguer ».',
-  },
-  {
-    id: 'programme-structures',
-    sourceId: 'cycle3-2020',
-    quote: 'Mobiliser des structures simples pour écrire des phrases en s’appuyant sur une trame connue.',
-    claim: 'Écrire des phrases simples sur une trame connue (« I am … », « Is she … ? »).',
+    sourceId: 'lve-cm-2026',
+    quote: 'Poser quelques questions simples à l’aide d’une gamme réduite de pronoms interrogatifs.',
+    claim: 'Poser quelques questions simples est au programme du CM1.',
   },
   {
     id: 'be-present',

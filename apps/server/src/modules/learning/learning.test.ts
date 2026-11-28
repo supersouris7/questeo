@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { fmt, generate } from '@epicademie/content';
-import type { Journey, LearningReport, Profile, SessionSummary } from '@epicademie/shared';
+import type { Journey, LearningReport, ParentWeek, Profile, SessionSummary } from '@epicademie/shared';
 import { attempts, sessions } from '../../db/schema.ts';
 import { dayIn } from '../../core/clock.ts';
 import { createTestApp, profileInput } from '../../testing/harness.ts';
@@ -219,6 +219,37 @@ describe('progrès personnel et ressenti de fin de séance', () => {
     const [row] = await t.database.db.select().from(sessions).where(eq(sessions.id, id));
     expect(row?.feeling).toBe(3);
     expect((await rate('00000000-0000-4000-8000-000000000000', 2)).statusCode).toBe(404);
+  });
+
+  const parentWeekUrl = (id: string) => `/api/v1/profiles/${id}/parent-week`;
+
+  it('semaine du parent : efforts, ressenti agrégé de cet enfant seulement, conseil', async () => {
+    const sibling = (
+      await t.http.inject({ method: 'POST', url: '/api/v1/profiles', payload: profileInput('Tom') })
+    ).json<Profile>().id;
+    for (const feeling of [1, 1, 3]) {
+      const id = await start();
+      await answer(id, feeling, true);
+      await finish(id);
+      await rate(id, feeling);
+    }
+    expect((await t.http.inject(parentWeekUrl(profileId))).json<ParentWeek>()).toMatchObject({
+      effort: { series: 3 },
+      feelings: { week: { pasEncore: 2, unPeu: 0, oui: 1 }, before: { pasEncore: 0, unPeu: 0, oui: 0 }, trend: null },
+      advice: 'rassurer',
+    });
+    expect((await t.http.inject(parentWeekUrl(sibling))).json<ParentWeek>()).toMatchObject({
+      effort: { series: 0 },
+      feelings: { week: { pasEncore: 0, unPeu: 0, oui: 0 } },
+      advice: 'proposer',
+    });
+  });
+
+  it('semaine du parent : refusée à une autre famille (404) et verrou parent fermé (403)', async () => {
+    const other = t.as((await t.signup()).cookie);
+    expect((await other.inject(parentWeekUrl(profileId))).statusCode).toBe(404);
+    await t.http.inject({ method: 'POST', url: '/api/v1/auth/parent/lock' });
+    expect((await t.http.inject(parentWeekUrl(profileId))).statusCode).toBe(403);
   });
 
   it('une autre famille ne lit ni n’écrit rien (404, aucune écriture)', async () => {

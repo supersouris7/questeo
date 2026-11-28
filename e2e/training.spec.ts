@@ -98,6 +98,7 @@ test('Entraînement : série complète de tables, correction, leçon et résulta
   await expect(page.getByText(/Bonne réponse :/).first()).toBeVisible();
   // Fin de séance : « Je me sens capable ? », 3 smileys assez grands pour un doigt.
   const feeling = page.getByRole('group', { name: 'Je me sens capable ?' });
+  await expect(feeling.getByText('Tes parents verront tes réponses.')).toBeVisible();
   const some = feeling.getByRole('button', { name: 'Un peu' });
   expect((await some.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   await some.click();

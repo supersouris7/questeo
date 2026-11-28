@@ -6,19 +6,19 @@ React 19, Vite, Tailwind 4, motion (animations), React Query (données serveur),
 
 ## Fonctionnalités (`src/features/`)
 
-| Dossier    | Écrans et rôle                                                                                    |
-| ---------- | ------------------------------------------------------------------------------------------------- |
-| `account`  | compte familial : connexion, inscription, mot de passe oublié, verrou parent                      |
-| `parent`   | espace parent : progrès de chaque enfant (synthèse, cartes matière, « À réviser »), lecture seule |
-| `admin`    | console d'administration pédagogique (signalements, notions)                                      |
-| `profiles` | choix et création de profil, héros ; profil choisi (`session.ts`)                                 |
-| `hub`      | menu principal, choix du mode et de la matière, modes multijoueur                                 |
-| `training` | chapitres, notions, partie d'entraînement et bilan                                                |
-| `boss`     | chapitres de boss, combat, Empereur du Savoir, boutique                                           |
-| `arena`    | arène multijoueur (salon, tour par tour)                                                          |
-| `realtime` | connexion temps réel, joueurs connectés, notifications, messages                                  |
-| `progress` | progression par notion, médailles, reliques                                                       |
-| `settings` | paramètres, à propos, crédits                                                                     |
+| Dossier    | Écrans et rôle                                                                                                                                                 |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `account`  | compte familial : connexion, inscription, mot de passe oublié, verrou parent                                                                                   |
+| `parent`   | espace parent : progrès de chaque enfant (efforts de la semaine et conseil, ressenti agrégé, synthèse, cartes matière, « Notions à renforcer »), lecture seule |
+| `admin`    | console d'administration pédagogique (signalements, notions)                                                                                                   |
+| `profiles` | choix et création de profil, héros ; profil choisi (`session.ts`)                                                                                              |
+| `hub`      | menu principal, choix du mode et de la matière, modes multijoueur                                                                                              |
+| `training` | chapitres, notions, partie d'entraînement et bilan                                                                                                             |
+| `boss`     | chapitres de boss, combat, Empereur du Savoir, boutique                                                                                                        |
+| `arena`    | arène multijoueur (salon, tour par tour)                                                                                                                       |
+| `realtime` | connexion temps réel, joueurs connectés, notifications, messages                                                                                               |
+| `progress` | progression par notion, médailles, reliques                                                                                                                    |
+| `settings` | paramètres, à propos, crédits                                                                                                                                  |
 
 ## Chargement à la demande
 

@@ -10,6 +10,8 @@ export interface SocketData {
   friendIds?: readonly string[];
   /** Écran TV de la famille (pas de profil : `profile` n'est pas renseigné). */
   tv?: boolean;
+  /** Invité sans compte : sa place dans une salle, et rien d'autre (ni profil ni famille). */
+  guest?: { readonly code: string; readonly seatId: string };
 }
 
 /**

@@ -33,9 +33,24 @@ src/
 | `training`  | parties hors boss, correction serveur, répétition espacée, coffres          |
 | `battles`   | combats de boss (état serveur), boss vaincus, médailles, équipement         |
 | `inventory` | objets possédés, équipement, boutique                                       |
-| `realtime`  | présence, messages prédéfinis, arène (socket.io)                            |
+| `realtime`  | présence, messages prédéfinis, arène, salles à code (socket.io)             |
 | `system`    | santé, disponibilité, métriques, réseau local, présence                     |
 | `telemetry` | erreurs remontées par le navigateur                                         |
+
+## Salles à code (temps réel)
+
+Socle du Duel et du Quiz TV ([ADR 0040](../adr/0040-duel-et-quiz-tv.md)), dans `modules/realtime` :
+
+- contrat : `packages/shared/src/duel.ts` et `party.ts` (messages, vues, durées) ;
+- `rooms.ts` : registre en mémoire (code, places, reconnexion, verrouillage, expirations, limite
+  des codes faux via `attempt-limiter.ts` et `client-ip.ts`) ; exposé par `attachRealtime`
+  (`rooms`). L'orchestrateur appelle `open`, `setup`, `start`, `touch`, `kick`, `close` et, pour un
+  profil, `joinProfile` ; il contrôle que le message vient de l'écran de la famille hôte ou de la
+  place concernée. `touch` à chaque activité de jeu, sinon la salle expire ;
+- `class-pool.ts` : notions d'une matière pour la classe de chacun, selon les chapitres que la
+  famille qui paie peut jouer ;
+- invité : `auth: { guest: { code, token? } }`. Le client joint le jeton reçu dans `quiz:joined`
+  à chaque reconnexion.
 
 ## Couches et règles
 

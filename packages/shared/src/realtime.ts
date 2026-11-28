@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import type { DuelClientEvents, DuelServerEvents } from './duel.ts';
+import { GuestAuthSchema, type QuizClientEvents, type QuizServerEvents } from './party.ts';
 import { ContentIdSchema, ResponseSchema, type Level } from './play.ts';
 import type { AvatarConfig, HeroId } from './profile.ts';
 
@@ -173,8 +175,8 @@ export type ArenaRespond = z.infer<typeof ArenaRespondSchema>;
 export const ArenaAnswerSchema = z.object({ response: ResponseSchema });
 export type ArenaAnswer = z.infer<typeof ArenaAnswerSchema>;
 
-/** Événements émis par le client. */
-export interface ClientToServerEvents {
+/** Événements émis par le client (Duel : `duel.ts` ; Quiz TV : `party.ts`). */
+export interface ClientToServerEvents extends DuelClientEvents, QuizClientEvents {
   chat: (msg: ChatSend) => void;
   'arena:create': (msg: ArenaCreate) => void;
   'arena:respond': (msg: ArenaRespond) => void;
@@ -184,7 +186,7 @@ export interface ClientToServerEvents {
 }
 
 /** Événements émis par le serveur. */
-export interface ServerToClientEvents {
+export interface ServerToClientEvents extends DuelServerEvents, QuizServerEvents {
   presence: (players: OnlinePlayer[]) => void;
   chat: (msg: ChatMessage) => void;
   arena: (view: ArenaView) => void;
@@ -194,15 +196,22 @@ export interface ServerToClientEvents {
   replaced: () => void;
 }
 
-/** Données d'authentification de la connexion temps réel. */
 /**
- * Données d'authentification : un joueur (profil de la famille), ou l'écran TV de la famille
- * (aucun profil : il affiche les parties de la famille, les téléphones servent de manettes).
+ * Données d'authentification de la connexion temps réel : un joueur (profil de la famille),
+ * l'écran TV de la famille (aucun profil : il affiche les parties de la famille, les téléphones
+ * servent de manettes), ou un invité sans compte (code d'une salle ouverte, voir `party.ts`).
  */
-export const RealtimeAuthSchema = z.union([z.object({ profileId: z.uuid() }), z.object({ tv: z.literal(true) })]);
+export const RealtimeAuthSchema = z.union([
+  z.object({ profileId: z.uuid() }),
+  z.object({ tv: z.literal(true) }),
+  z.object({ guest: GuestAuthSchema }),
+]);
 
 /** Raisons de refus de connexion (message affiché tel quel). */
 export const REALTIME_REFUSALS = {
   unknownProfile: 'Profil introuvable',
   replaced: 'Ce joueur vient d’être ouvert sur un autre appareil.',
+  /** Une seule réponse pour code inconnu, salle pleine ou verrouillée, jeton périmé. */
+  roomUnavailable: 'Salle introuvable, complète, ou partie déjà commencée.',
+  tooManyAttempts: 'Trop d’essais. Réessaie dans quelques minutes.',
 } as const;

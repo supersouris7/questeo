@@ -11,7 +11,9 @@ import {
   RealtimeAuthSchema,
   type ChatMessage,
   type ClientToServerEvents,
+  type GuestAuth,
   type Profile,
+  type QuizClosedReason,
   type ServerToClientEvents,
 } from '@epicademie/shared';
 import type { Clock } from '../../core/clock.ts';
@@ -19,8 +21,10 @@ import type { Random } from '../../core/random.ts';
 import type { ErrorReporter } from '../../core/observability/error-reporter.ts';
 import type { Metrics } from '../../core/observability/metrics.ts';
 import { createArenas } from './arena.ts';
-import type { Presence, SocketData } from './presence.ts';
+import { clientIp } from './client-ip.ts';
+import type { PlayerSocket, Presence, SocketData } from './presence.ts';
 import { tokenBucket } from './rate-limiter.ts';
+import { createRooms, type Rooms, type Seat } from './rooms.ts';
 
 /**
  * Passerelle temps réel (socket.io) : authentifie la connexion, valide chaque message avec les
@@ -29,6 +33,8 @@ import { tokenBucket } from './rate-limiter.ts';
  * - Présence : un profil n'est ouvert que sur un seul appareil (2e connexion refusée).
  * - Messages : prédéfinis ou emoji seulement (pas de texte libre : sûr pour des enfants).
  * - Arène : invitation, puis tour par tour.
+ * - Invités sans compte : un code de salle ouverte (ou un jeton de place) suffit ; aucun
+ *   gestionnaire des joueurs inscrits ne leur est branché (docs/adr/0040-duel-et-quiz-tv.md).
  */
 export interface RealtimeDeps {
   readonly presence: Presence;
@@ -51,6 +57,8 @@ export interface RealtimeDeps {
   readonly logger: FastifyBaseLogger;
   readonly reporter: ErrorReporter;
   readonly metrics?: Metrics;
+  /** Proxys de confiance devant le serveur (`TRUST_PROXY`) : adresse du client des invités. */
+  readonly trustProxy: number;
 }
 
 export type RealtimeServer = Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
@@ -60,6 +68,50 @@ const CHAT_BURST = 5;
 const CHAT_REFILL_MS = 2_000;
 const ACTION_BURST = 20;
 const ACTION_REFILL_MS = 250;
+
+/** Salles à code : les téléphones d'invités sont prévenus puis déconnectés quand leur place disparaît. */
+function createGatewayRooms(io: RealtimeServer, { clock, random, metrics }: RealtimeDeps) {
+  const dismiss = (seat: Seat, reason: QuizClosedReason) => {
+    const socket = seat.connectionId ? io.sockets.sockets.get(seat.connectionId) : undefined;
+    socket?.emit('quiz:closed', reason);
+    // Un joueur inscrit garde sa connexion (présence, autres modes).
+    if (!seat.profile) socket?.disconnect(true);
+  };
+  return createRooms({
+    clock,
+    random,
+    onClosed: (room, reason) => {
+      io.to(tvRoom(room.familyId)).emit('quiz:closed', reason);
+      for (const seat of room.seats) dismiss(seat, reason);
+    },
+    onSeatRemoved: (_room, seat, reason) => dismiss(seat, reason),
+    onCountChange: (n) => metrics?.openRooms.set(n),
+    onCodeFailure: () => metrics?.roomCodeFailures.inc(),
+  });
+}
+
+/** Téléphone invité : il prend sa place et reçoit son jeton ; rien d'autre ne lui est ouvert. */
+function welcomeGuest(io: RealtimeServer, socket: PlayerSocket, rooms: Rooms, metrics?: Metrics) {
+  if (!socket.data.guest) return;
+  const { code, seatId } = socket.data.guest;
+  const previous = rooms.get(code)?.seats.find((s) => s.seatId === seatId)?.connectionId;
+  const seat = rooms.attach(code, seatId, socket.id);
+  if (!seat) {
+    socket.disconnect(true);
+    return;
+  }
+  // Reprise avant que l'ancienne connexion soit tombée : elle est fermée.
+  const old = previous ? io.sockets.sockets.get(previous) : undefined;
+  old?.emit('replaced');
+  old?.disconnect(true);
+  socket.emit('quiz:joined', { seatId, token: seat.token });
+  socket.on('disconnect', () => {
+    rooms.disconnect(code, seatId, socket.id);
+    metrics?.realtimeDisconnects.inc();
+  });
+}
+
+const tvRoom = (familyId: string) => `tv:${familyId}`;
 
 export function attachRealtime(io: RealtimeServer, deps: RealtimeDeps) {
   const { presence, logger, reporter, metrics } = deps;
@@ -79,7 +131,7 @@ export function attachRealtime(io: RealtimeServer, deps: RealtimeDeps) {
     },
   });
   const arenaFamily = new Map<string, string>();
-  const tvRoom = (familyId: string) => `tv:${familyId}`;
+  const rooms = createGatewayRooms(io, deps);
 
   /** Chaque joueur reçoit la liste de ses connectés : sa famille et ses amis actifs (jamais les autres). */
   const broadcastPresence = () => {
@@ -88,12 +140,28 @@ export function attachRealtime(io: RealtimeServer, deps: RealtimeDeps) {
   };
   presence.onChanged(broadcastPresence);
 
+  /** Invité : pas de session ; code de salle ouverte ou jeton de place, tentatives limitées. */
+  const admitGuest = (socket: PlayerSocket, { code, token }: GuestAuth, next: (err?: Error) => void) => {
+    const { address, headers } = socket.handshake;
+    const entry = rooms.joinGuest(clientIp(address, headers['x-forwarded-for'], deps.trustProxy), code, token);
+    if (!entry.ok) {
+      next(new Error(REALTIME_REFUSALS[entry.reason]));
+      return;
+    }
+    socket.data.guest = { code: entry.room.code, seatId: entry.seat.seatId };
+    next();
+  };
+
   // Authentification de la connexion : session de la famille (cookie), profil de cette famille,
-  // pas déjà ouvert ailleurs.
+  // pas déjà ouvert ailleurs ; ou invité d'une salle.
   io.use((socket, next) => {
     const auth = RealtimeAuthSchema.safeParse(socket.handshake.auth);
     if (!auth.success) {
       next(new Error(REALTIME_REFUSALS.unknownProfile));
+      return;
+    }
+    if ('guest' in auth.data) {
+      admitGuest(socket, auth.data.guest, next);
       return;
     }
     if ('tv' in auth.data) {
@@ -134,6 +202,10 @@ export function attachRealtime(io: RealtimeServer, deps: RealtimeDeps) {
   });
 
   io.on('connection', (socket) => {
+    if (socket.data.guest) {
+      welcomeGuest(io, socket, rooms, metrics);
+      return;
+    }
     if (socket.data.tv) {
       // Écran TV : rejoint la diffusion de sa famille et reçoit la partie en cours, s'il y en a.
       const familyId = socket.data.familyId;
@@ -143,6 +215,7 @@ export function attachRealtime(io: RealtimeServer, deps: RealtimeDeps) {
         .map((id) => arenas.viewOf(id))
         .find((v) => v !== null);
       if (current) socket.emit('arena', current);
+      socket.on('disconnect', () => rooms.hostDisconnected(socket.id));
       return;
     }
     const profile = socket.data.profile;
@@ -226,9 +299,12 @@ export function attachRealtime(io: RealtimeServer, deps: RealtimeDeps) {
   });
 
   return {
+    /** Registre des salles à code (Quiz TV). */
+    rooms,
     /** Arrêt propre : minuteurs coupés, connexions fermées. */
     async close(): Promise<void> {
       arenas.dispose();
+      rooms.dispose();
       await io.close();
     },
   };

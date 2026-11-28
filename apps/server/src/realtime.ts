@@ -7,7 +7,7 @@ import { attachRealtime, originAllowed, type RealtimeServer } from './modules/re
 const MAX_MESSAGE_BYTES = 16 * 1024;
 
 /** Branche socket.io sur le serveur HTTP de l'application. */
-export function startRealtime(app: App, corsOrigins: readonly string[] | null) {
+export function startRealtime(app: App, corsOrigins: readonly string[] | null, trustProxy: number) {
   const io: RealtimeServer = new Server(app.http.server, {
     serveClient: false,
     maxHttpBufferSize: MAX_MESSAGE_BYTES,
@@ -15,6 +15,7 @@ export function startRealtime(app: App, corsOrigins: readonly string[] | null) {
     ...(corsOrigins ? { cors: { origin: [...corsOrigins] } } : {}),
   });
   return attachRealtime(io, {
+    trustProxy,
     presence: app.presence,
     authorize: async (cookieHeader, profileId) => {
       const token = readCookie(cookieHeader, SESSION_COOKIE);

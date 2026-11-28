@@ -25,7 +25,7 @@ async function main(): Promise<void> {
   else await assertSchemaUpToDate(database, config.migrationsDir);
 
   const app = await buildApp({ config, database });
-  const realtime = startRealtime(app, config.corsOrigins);
+  const realtime = startRealtime(app, config.corsOrigins, config.trustProxy);
   const log = app.http.log;
 
   // Production seulement (en recette, les comptes sont validés à la création) : purge au démarrage

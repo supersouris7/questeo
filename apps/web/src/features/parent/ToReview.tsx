@@ -1,14 +1,14 @@
 import type { ReviewItem } from './summary.ts';
 
-/** Espace parent : « À réviser », les notions les plus fragiles (lecture seule, aucune action). */
+/** Espace parent : « Notions à renforcer » (lecture seule, aucune action). */
 export function ToReview({ items }: { readonly items: readonly ReviewItem[] }) {
   return (
     <section aria-labelledby="a-reviser" className="flex flex-col gap-2">
       <h2 id="a-reviser" className="text-lg font-bold">
-        À réviser
+        Notions à renforcer
       </h2>
       {items.length === 0 ? (
-        <p>Rien d’urgent à réviser pour l’instant.</p>
+        <p>Rien d’urgent à renforcer pour l’instant.</p>
       ) : (
         <ul className="flex flex-col gap-2">
           {items.map((i) => (

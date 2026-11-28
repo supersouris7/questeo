@@ -18,8 +18,8 @@
 | `an-5e-04` | Modaux, souhait, opinion   | should / shouldn't ; could / couldn't ; I wish to, I would love to ; I think, in my opinion                                         | couverte, en relecture |
 | `an-5e-05` | Groupe nominal et pronoms  | much, many, some ; pronoms réfléchis ; dérivation (-able, un-) ; antonymes                                                          | absente                |
 | `an-5e-06` | Relier et situer           | but, whereas, however ; in the foreground / background ; on the right / left ; very, much, too                                      | absente                |
-| `an-5e-07` | Écouter et comprendre      | message enregistré ; dialogue ; repères culturels de 5e (aire anglophone)                                                           | absente                |
-| `an-5e-08` | Vocabulaire thématique     | voyages ; sport ; nature ; personnages célèbres ; repères des axes culturels                                                        | absente                |
+| `an-5e-07` | Écouter et comprendre      | message enregistré ; dialogue ; repères culturels de 5e (aire anglophone)                                                           | couverte, en relecture |
+| `an-5e-08` | Vocabulaire thématique     | voyages ; sport ; nature ; personnages célèbres ; repères des axes culturels                                                        | couverte, en relecture |
 
 États : **absente** (rien en ligne), **partielle** (chapitres existants à compléter et à porter à 5 niveaux),
 **couverte** (5 niveaux, sources et relecture enregistrées).

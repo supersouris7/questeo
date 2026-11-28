@@ -128,6 +128,38 @@ export const JourneySchema = z.object({
 });
 export type Journey = z.infer<typeof JourneySchema>;
 
+// ——— Semaine vue par le parent : efforts d'abord, ressenti agrégé, un conseil ———
+
+/** Réponses « Je me sens capable ? » comptées sur une période. */
+const FeelingCountsSchema = z.object({ pasEncore: count, unPeu: count, oui: count });
+export type FeelingCounts = z.infer<typeof FeelingCountsSchema>;
+
+/** Conseil de la semaine (règles dans @epicademie/engine/parent-week, textes côté web). */
+export const PARENT_ADVICE = [
+  'proposer',
+  'rassurer',
+  'reprise',
+  'perseverance',
+  'progres',
+  'regularite',
+  'effort',
+] as const;
+export type ParentAdvice = (typeof PARENT_ADVICE)[number];
+
+/** Un seul enfant par réponse : aucune donnée des autres, aucune comparaison. */
+export const ParentWeekSchema = JourneySchema.extend({
+  feelings: z.object({
+    /** 7 derniers jours. */
+    week: FeelingCountsSchema,
+    /** Les 4 semaines d'avant. */
+    before: FeelingCountsSchema,
+    /** Évolution entre les deux périodes (null si trop peu de réponses). */
+    trend: z.enum(TRENDS).nullable(),
+  }),
+  advice: z.enum(PARENT_ADVICE),
+});
+export type ParentWeek = z.infer<typeof ParentWeekSchema>;
+
 // ——— Badges (conditions : @epicademie/engine/badges.ts) ———
 
 export const BADGE_CATEGORIES = ['boss', 'parfait', 'perseverance', 'chapitres', 'consolidees', 'coffres'] as const;

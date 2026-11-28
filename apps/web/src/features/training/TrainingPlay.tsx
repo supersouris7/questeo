@@ -115,6 +115,7 @@ function Game(setup: TrainingSetup) {
         sessionId={s.sessionId}
         missed={s.missed}
         gender={profile.gender}
+        adult={profile.grade === 'adulte'}
         chapterId={chapterId}
         epreuve={setup.epreuve === true}
         exitTo={exitTo}

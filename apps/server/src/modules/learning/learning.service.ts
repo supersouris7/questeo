@@ -1,6 +1,14 @@
 import { CHAPTERS, chapterOfAnySkill, getSkill } from '@epicademie/content';
-import { badgeProgress, journey, JOURNEY_WINDOW_DAYS, learningReport } from '@epicademie/engine';
-import type { BadgeProgress, Journey, LearningReport } from '@epicademie/shared';
+import {
+  badgeProgress,
+  FEELING_HISTORY_DAYS,
+  feelingSummary,
+  journey,
+  JOURNEY_WINDOW_DAYS,
+  learningReport,
+  weeklyAdvice,
+} from '@epicademie/engine';
+import type { BadgeProgress, Journey, LearningReport, ParentWeek } from '@epicademie/shared';
 import type { Db } from '../../db/client.ts';
 import type { Clock } from '../../core/clock.ts';
 import { trainingRepo } from '../training/index.ts';
@@ -43,6 +51,18 @@ export function createLearningService({ db, clock, timeZone }: { db: Db; clock: 
       ]);
       // Notions d'entraînement seulement (les questions de boss n'ont pas de progression propre).
       return journey({ facts: facts.filter((f) => getSkill(f.skillId)), seriesDays, today: clock.today() });
+    },
+
+    /** Semaine vue par le parent (règles dans @epicademie/engine/parent-week). */
+    async parentWeek(profileId: string): Promise<ParentWeek> {
+      // Un jour de marge : le découpage en jours se fait dans le fuseau de la famille.
+      const since = new Date(clock.now().getTime() - (FEELING_HISTORY_DAYS + 1) * DAY_MS);
+      const [week, facts] = await Promise.all([
+        service.journey(profileId),
+        learningRepo(db).feelings(profileId, since, timeZone),
+      ]);
+      const feelings = feelingSummary(facts, week.today);
+      return { ...week, feelings, advice: weeklyAdvice(week, feelings) };
     },
 
     /** Badges : grade atteint et prochain objectif (conditions dans @epicademie/engine). */

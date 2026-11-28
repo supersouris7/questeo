@@ -75,7 +75,10 @@ discussion libre ; aucune donnée d'invité conservée ; une seule instance serv
   sauts de confiance que `TRUST_PROXY`), 10 codes faux par 10 minutes, puis refus pendant 10
   minutes ; compteur global des échecs exposé en métrique (alerte). Salle **verrouillée** au
   lancement (plus personne n'entre) ; 8 manettes au plus ; l'hôte voit chaque arrivée et peut
-  retirer un joueur.
+  retirer un joueur. **Configuration** : `TRUST_PROXY` = nombre exact de proxys devant le serveur
+  (nginx seul : `1`). À `0` derrière un proxy, tous les clients partagent l'adresse du proxy :
+  10 faux codes bloquent toutes les entrées en salle 10 min. Trop haut, l'adresse vient d'un
+  en-tête fourni par le client et la limite se contourne.
 - **Expiration** : salle jamais lancée fermée à 10 min (`LOBBY_TTL_MS`) ; salle inactive fermée à
   15 min ; durée totale bornée à 2 h ; hôte déconnecté plus de 30 s : salle fermée pour tous.
 - **Invités** : connexion socket.io sans cookie, `auth: { guest: { code, token? } }`. Le serveur

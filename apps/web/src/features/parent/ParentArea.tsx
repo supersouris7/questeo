@@ -11,10 +11,11 @@ import { EvaluationLine, EvaluationNotes } from './Evaluations.tsx';
 import { SubjectCards, SubjectDetail } from './SubjectCards.tsx';
 import { useSubjectBars } from './useSubjectBars.ts';
 import { synthesis, toReview } from './summary.ts';
+import { WeekCard, WeekReport } from './WeekSummary.tsx';
 
 /**
- * Espace parent, rubrique Progrès : vue de chaque enfant (cartes matière, « À réviser »), puis page
- * d'un enfant : synthèse, avancement par matière et chapitre, notions à réviser. Lecture seule. Réservé au parent (code PIN ou mot de passe, verrou de 10 minutes). Écrit pour un parent non technicien : des mots, peu de chiffres.
+ * Espace parent, rubrique Progrès : vue de chaque enfant (efforts de la semaine, conseil, cartes
+ * matière), puis page d'un enfant : la semaine, synthèse, avancement, notions à renforcer. Lecture seule. Réservé au parent (code PIN ou mot de passe, verrou de 10 minutes). Écrit pour un parent non technicien : des mots, peu de chiffres.
  */
 
 const useLearning = (profileId: string) => useQuery(learningQuery(profileId));
@@ -55,13 +56,14 @@ function ChildCard({ profile: p }: { readonly profile: Profile }) {
           <p className="text-muted text-sm">{p.grade ? gradeInfo(p.grade).name : 'Classe non renseignée'}</p>
         </div>
       </div>
+      <WeekCard child={p} />
       {bars && bars.length > 0 && (
         <SubjectCards bars={bars} onPick={(id) => void navigate(`/parent/enfant/${p.id}?matiere=${id}`)} />
       )}
       <EvaluationLine profileId={p.id} grade={p.grade} />
       {review.length > 0 && (
         <p className="text-sm">
-          <span className="text-muted font-bold">À réviser : </span>
+          <span className="text-muted font-bold">Notions à renforcer : </span>
           {review.map((i) => i.title).join(', ')}
         </p>
       )}
@@ -95,9 +97,10 @@ function ReportView({ report: r, child }: { readonly report: LearningReport; rea
   const bars = useSubjectBars(child, r);
   const [params, setParams] = useSearchParams();
   const picked = bars?.find((b) => b.id === params.get('matiere'));
-  // Ordre de la page : synthèse, notes des évaluations, avancement, à réviser.
+  // Ordre de la page : la semaine (efforts d'abord), synthèse, évaluations, avancement, à renforcer.
   return (
     <div className="flex flex-col gap-6">
+      <WeekReport child={child} />
       {bars && <p className="text-lg font-bold">{synthesis(child.name, bars)}</p>}
       <EvaluationNotes profileId={child.id} grade={child.grade} />
       {bars && bars.length > 0 && (

@@ -74,7 +74,7 @@ const report: LearningReport = {
 };
 
 describe('lecture du suivi pour un parent', () => {
-  it('« À réviser » : notions fragiles d’abord, 3 au plus, avec matière et raison courte', () => {
+  it('« Notions à renforcer » : notions fragiles d’abord, 3 au plus, avec matière et raison courte', () => {
     expect(toReview(report)).toEqual([
       {
         skillId: 'm5-priorites',
@@ -162,12 +162,12 @@ describe('espace parent', () => {
     const list = within(card).getByRole('list', { name: 'Avancement par matière' });
     expect(list).toHaveClass('@min-[26rem]:grid-cols-2');
     expect(list.parentElement).toHaveClass('@container');
-    expect(card).toHaveTextContent('À réviser : Priorités opératoires');
+    expect(card).toHaveTextContent('Notions à renforcer : Priorités opératoires');
     await user.click(within(card).getByRole('link', { name: /Voir les progrès/ }));
     expect(
       await screen.findByText('Léa avance en maths : 1 notion maîtrisée sur', { exact: false }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'À réviser' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Notions à renforcer' })).toBeInTheDocument();
     expect(screen.getByText(/Erreur fréquente : La multiplication/)).toBeInTheDocument();
     // Lecture seule : ni graphique, ni détail par notion, ni création d'entraînement.
     for (const gone of [/Bilan de la semaine/, /Préparer une séance/, /Par matière/, /recommand/i])

@@ -9,7 +9,14 @@ const SMILEYS: readonly { readonly value: Feeling; readonly face: string; readon
 ];
 
 /** « Je me sens capable ? » en fin de séance : 3 smileys, facultatif, rien d'autre n'est demandé. */
-export function FeelingQuestion({ sessionId }: { readonly sessionId: string }) {
+export function FeelingQuestion({
+  sessionId,
+  adult,
+}: {
+  readonly sessionId: string;
+  /** Profil adulte : pas de mention des parents. */
+  readonly adult: boolean;
+}) {
   const [chosen, setChosen] = useState<Feeling | null>(null);
   const [failed, setFailed] = useState(false);
   const choose = (value: Feeling) => {
@@ -26,6 +33,7 @@ export function FeelingQuestion({ sessionId }: { readonly sessionId: string }) {
       <p aria-hidden className="font-display text-xl tracking-wide">
         Je me sens capable ?
       </p>
+      {!adult && <p className="text-muted text-sm">Tes parents verront tes réponses.</p>}
       <div className="flex justify-center gap-3">
         {SMILEYS.map((s) => (
           <button

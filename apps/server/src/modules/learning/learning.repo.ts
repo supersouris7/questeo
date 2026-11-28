@@ -1,5 +1,5 @@
 import { and, desc, eq, gt, gte, isNotNull, ne, notInArray, sql } from 'drizzle-orm';
-import type { AnswerFact } from '@epicademie/engine';
+import type { AnswerFact, FeelingFact } from '@epicademie/engine';
 import type { Executor } from '../../db/client.ts';
 import type { ModeId } from '@epicademie/shared';
 import { attempts, bossRecords, sessions, skillStates } from '../../db/schema.ts';
@@ -49,6 +49,18 @@ export function learningRepo(db: Executor) {
           ),
         );
       return rows.map((r) => r.day);
+    },
+
+    /** Réponses « Je me sens capable ? » depuis `since` : jour de fin de série et note, rien d'autre. */
+    async feelings(profileId: string, since: Date, timeZone: string): Promise<FeelingFact[]> {
+      const rows = await db
+        .select({
+          day: sql<string>`to_char(${sessions.finishedAt} at time zone ${timeZone}, 'YYYY-MM-DD')`,
+          feeling: sessions.feeling,
+        })
+        .from(sessions)
+        .where(and(eq(sessions.profileId, profileId), gte(sessions.finishedAt, since), isNotNull(sessions.feeling)));
+      return rows.flatMap(({ day, feeling }) => (feeling === null ? [] : [{ day, feeling }]));
     },
 
     /** Compteurs des badges (voir @epicademie/engine/badges.ts), tirés des événements enregistrés. */

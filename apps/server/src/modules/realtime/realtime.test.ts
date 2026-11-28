@@ -37,7 +37,7 @@ function join(profileId: string, cookie = t.family().cookie) {
 
 beforeAll(async () => {
   t = await createTestApp();
-  realtime = startRealtime(t.app, null);
+  realtime = startRealtime(t.app, null, 0);
   await t.raw.listen({ port: 0, host: '127.0.0.1' });
   url = `http://127.0.0.1:${(t.raw.server.address() as AddressInfo).port}`;
 });

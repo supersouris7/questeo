@@ -2,7 +2,7 @@ import { getAnySkill } from '@epicademie/content';
 import { SUBJECTS, type LearningReport, type Tally } from '@epicademie/shared';
 
 /**
- * Lecture du suivi pour un parent : une phrase de synthèse et les notions à réviser, sans
+ * Lecture du suivi pour un parent : une phrase de synthèse et les notions à renforcer, sans
  * pourcentage de maîtrise. Fonctions pures, testées.
  */
 
@@ -45,7 +45,7 @@ const reasonFor = (s: LearningReport['skills'][number]): string => {
   return s.tally.answered === 0 ? 'Pas encore réussie' : `Souvent besoin d’aide (${successPhrase(s.tally)})`;
 };
 
-/** « À réviser » : les 3 notions les plus fragiles (à travailler d'abord, puis les moins réussies seul). */
+/** « Notions à renforcer » : les 3 notions les plus fragiles (à travailler d'abord, puis les moins réussies seul). */
 export function toReview(r: LearningReport): ReviewItem[] {
   const rank = (id: string) => {
     const i = r.toRework.indexOf(id);

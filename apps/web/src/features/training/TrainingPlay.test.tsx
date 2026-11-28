@@ -244,6 +244,7 @@ describe('fin de séance : sens et « Je me sens capable ? »', () => {
       const question = await screen.findByRole('group', { name: 'Je me sens capable ?' });
       const smileys = within(question).getAllByRole('button');
       expect(smileys.map((b) => b.textContent)).toEqual(['😕Pas encore', '🙂Un peu', '😄Oui']);
+      expect(question).toHaveTextContent('Tes parents verront tes réponses.');
       await user.click(within(question).getByRole('button', { name: 'Oui' }));
       expect(await within(question).findByText('Merci, c’est noté !')).toBeInTheDocument();
       expect(within(question).getByRole('button', { name: 'Oui' })).toHaveAttribute('aria-pressed', 'true');

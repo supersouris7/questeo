@@ -45,6 +45,35 @@ test('Espace parent : enfant listé, accès à l’abonnement familial', async (
   await expect(page.getByRole('listitem', { name: `Progrès de ${name}` })).toBeVisible();
 });
 
+test('Espace parent : la semaine d’abord, puis les réponses « Je me sens capable ? »', async ({ page }) => {
+  await signupFamily(page);
+  const name = `Sem${Date.now() % 10000}`;
+  await createProfile(page, name);
+  // Une série terminée avec sa réponse, posée directement par l'API (le jeu est couvert par training.spec).
+  const headers = { origin: new URL(page.url()).origin };
+  const profiles = (await (await page.request.get('/api/v1/profiles')).json()) as { id: string; name: string }[];
+  const profileId = profiles.find((p) => p.name === name)?.id;
+  const created = await page.request.post('/api/v1/sessions', {
+    headers,
+    data: { profileId, mode: 'entrainement', subject: 'maths', chapterId: 'm5-calcul', skillId: 'm5-tables' },
+  });
+  expect(created.status()).toBe(201);
+  const { id } = (await created.json()) as { id: string };
+  expect((await page.request.post(`/api/v1/sessions/${id}/finish`, { headers })).status()).toBe(200);
+  const rated = await page.request.post(`/api/v1/sessions/${id}/feeling`, { headers, data: { feeling: 3 } });
+  expect(rated.status()).toBe(204);
+
+  await page.goto('/parent');
+  const card = page.getByRole('listitem', { name: `Progrès de ${name}` });
+  await expect(card.getByRole('heading', { name: 'Efforts de la semaine' })).toBeVisible();
+  await expect(card.getByText(/Conseil de la semaine/)).toBeVisible();
+  await card.getByRole('link', { name: /Voir les progrès de/ }).click();
+  await expect(page.getByRole('heading', { level: 2 }).first()).toHaveText('Efforts de la semaine');
+  const feelings = page.getByRole('region', { name: '« Je me sens capable ? »' });
+  await expect(feelings.getByRole('row', { name: /Oui/ }).getByRole('cell').first()).toHaveText('1');
+  await expect(page.getByRole('heading', { name: 'Notions à renforcer' })).toBeVisible();
+});
+
 test('Adulte : parcours de remise à niveau en maths', async ({ page }) => {
   await signupFamily(page);
   await page.getByPlaceholder('Ex. Léa').fill(`Adu${Date.now() % 10000}`);

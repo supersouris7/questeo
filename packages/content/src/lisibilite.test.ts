@@ -106,6 +106,10 @@ const REPRISES = [
   'fcm1-groupe-sujet',
   'fcm1-types-sujets',
   'fcm1-nom-ou-verbe',
+  'hcm1-traces',
+  'hcm1-heritages',
+  'hcm1-mouvements',
+  'hcm1-clovis-charlemagne',
 ];
 
 describe('détecteur : catalogue', () => {

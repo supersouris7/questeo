@@ -18,7 +18,7 @@ export function accountsRepo(db: Executor) {
     async createFamilyAccount(
       email: string,
       passwordHash: string | null,
-      options: { verifiedAt?: Date | null; googleSub?: string } = {},
+      options: { verifiedAt?: Date | null; googleSub?: string; portalLinkedAt?: Date } = {},
     ) {
       const [family] = await db.insert(families).values({}).returning({ id: families.id });
       if (!family) throw new Error('création de famille sans retour');
@@ -30,6 +30,7 @@ export function accountsRepo(db: Executor) {
           passwordHash,
           emailVerifiedAt: options.verifiedAt ?? null,
           googleSub: options.googleSub ?? null,
+          portalLinkedAt: options.portalLinkedAt ?? null,
         })
         .returning();
       if (!account) throw new Error('création de compte sans retour');

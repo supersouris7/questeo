@@ -22,6 +22,7 @@ import {
   type Inventory,
   type Journey,
   type LearningReport,
+  type ParentWeek,
   type ItemId,
   type Profile,
   type SkillProgress,
@@ -85,6 +86,10 @@ export interface FakeApiOptions {
   readonly pin?: string | null;
   /** Déconnexion du portail placé devant la plateforme. */
   readonly portalLogoutUrl?: string;
+  /** Le portail annonce la connexion directe. */
+  readonly portalLogin?: boolean;
+  /** Compte sans mot de passe (portail) ; sans `pin`, le code parent reste à choisir. */
+  readonly noPassword?: boolean;
   readonly profiles?: readonly Profile[];
   readonly skills?: readonly SkillProgress[];
   readonly inventory?: Inventory;
@@ -115,9 +120,17 @@ export interface FakeApiOptions {
   /** Rapport de suivi renvoyé pour chaque profil (par défaut : vide). */
   readonly learning?: LearningReport;
   readonly journey?: Journey;
+  /** Semaine vue par le parent, par profil (par défaut : aucune séance). */
+  readonly parentWeeks?: Readonly<Record<string, ParentWeek>>;
   /** Abonnement familial en cours (par défaut : oui, tous les chapitres jouables). */
   readonly premium?: boolean;
 }
+
+export const emptyParentWeek = (): ParentWeek => ({
+  ...emptyJourney(),
+  feelings: { week: { pasEncore: 0, unPeu: 0, oui: 0 }, before: { pasEncore: 0, unPeu: 0, oui: 0 }, trend: null },
+  advice: 'proposer',
+});
 
 /** Rapport de suivi vide (nouveau joueur). */
 export const emptyJourney = (): Journey => ({
@@ -207,6 +220,8 @@ function authHandlers(options: FakeApiOptions) {
       parent: session.parent,
       parentUntil: session.parent ? '2099-01-01T00:00:00.000Z' : null,
       hasPin: session.pin !== null,
+      ...(options.noPassword ? { noPassword: true } : {}),
+      ...(options.noPassword && session.pin === null ? { needsPin: true } : {}),
     };
   };
   const requireParent = () => {
@@ -241,6 +256,7 @@ function authHandlers(options: FakeApiOptions) {
       recette: options.recette ?? false,
       passwordMinLength: options.passwordMinLength ?? (options.recette ? 8 : 12),
       ...(options.portalLogoutUrl ? { portalLogoutUrl: options.portalLogoutUrl } : {}),
+      ...(options.portalLogin ? { portalLogin: true } : {}),
     }),
     signupStudent: ({ body }) => {
       const b = body as { name: string; avatar: unknown; grade: string };
@@ -284,8 +300,9 @@ function authHandlers(options: FakeApiOptions) {
       return null;
     },
     setParentPin: ({ body }) => {
-      const b = body as { password: string; pin: string };
-      if (b.password !== FAKE_PASSWORD) throw new FakeError(401, 'UNAUTHORIZED', 'Mot de passe incorrect.');
+      const b = body as { password?: string; pin: string };
+      if (options.noPassword && session.pin === null) requireParent();
+      else if (b.password !== FAKE_PASSWORD) throw new FakeError(401, 'UNAUTHORIZED', 'Mot de passe incorrect.');
       session.pin = b.pin;
       return me();
     },
@@ -785,6 +802,7 @@ export function createFakeApi(options: FakeApiOptions = {}) {
     disabledContent: () => ({ skills: [...disabledSet] }),
     learningReport: () => options.learning ?? emptyLearning(),
     journey: () => options.journey ?? emptyJourney(),
+    parentWeek: ({ params }) => options.parentWeeks?.[params.id ?? ''] ?? emptyParentWeek(),
     rateSession: ({ body }) => {
       feelings.push((body as { feeling: number }).feeling);
       return null;
