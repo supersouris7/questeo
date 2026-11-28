@@ -148,4 +148,9 @@ export const RELECTURES: readonly Relecture[] = [
   { skillId: 'f6-accord-sujet-verbe', version: 1, lot: 'fr-6e-05', date: '2026-11-26', verdict: 'ok' },
   { skillId: 'f6-participe-etre', version: 1, lot: 'fr-6e-05', date: '2026-11-26', verdict: 'ok' },
   { skillId: 'f6-participe-avoir-cod', version: 1, lot: 'fr-6e-05', date: '2026-11-26', verdict: 'ok' },
+  { skillId: 'fcm1-verbe-conjugue', version: 2, lot: 'rp-fr-cm1-02', date: '2026-11-28', verdict: 'ok' },
+  { skillId: 'fcm1-infinitif', version: 2, lot: 'rp-fr-cm1-02', date: '2026-11-28', verdict: 'ok' },
+  { skillId: 'fcm1-groupe-sujet', version: 2, lot: 'rp-fr-cm1-02', date: '2026-11-28', verdict: 'ok' },
+  { skillId: 'fcm1-types-sujets', version: 2, lot: 'rp-fr-cm1-02', date: '2026-11-28', verdict: 'ok' },
+  { skillId: 'fcm1-nom-ou-verbe', version: 2, lot: 'rp-fr-cm1-02', date: '2026-11-28', verdict: 'ok' },
 ];

@@ -2,6 +2,7 @@
  * Données du chapitre « Le verbe et le sujet » (CM1) : faits cités et banques de phrases écrites pour l'exercice.
  * Chaque fait porte l'identifiant de sa source (registre `sources.ts`) et sa citation exacte.
  */
+import type { Sens } from '../types.ts';
 import type { Fait } from './phrases.donnees.ts';
 
 const PROGRAMME = 'francais-cycle3-2025';
@@ -42,6 +43,43 @@ export const FAITS_VS: readonly Fait[] = [
       'Distinguer les variations morphologiques du verbe de celles du nom (ex : il élève / tu élèves / elles élèvent vs une élève / des élèves)',
   },
 ];
+
+/** Pourquoi apprendre chaque notion (docs/contenus/README.md §9). */
+export const SENS_VS = {
+  verbe: {
+    type: 'savais-tu',
+    text: 'Le programme de ton école dit que trouver le verbe dans la phrase est très important.',
+    source: PROGRAMME,
+    citation: 'L’identification du verbe dans la phrase est primordiale',
+  },
+  infinitif: {
+    type: 'usage',
+    text: 'Au CM1, tu cherches aussi l’infinitif quand tu étudies le passé composé.',
+    source: PROGRAMME,
+    citation:
+      'Connaître la composition du passé composé en deux parties (auxiliaire + participe passé) ; retrouver la forme infinitive du verbe',
+  },
+  groupeSujet: {
+    type: 'usage',
+    text: 'Quand tu écris, le groupe sujet et le verbe doivent s’accorder.',
+    source: PROGRAMME,
+    citation:
+      'comprenne et applique les différentes chaînes d’accords dans la phrase (dans le groupe nominal et entre groupe sujet et verbe)',
+  },
+  typesSujets: {
+    type: 'savais-tu',
+    text: 'On peut remplacer un groupe nominal sujet par un pronom personnel sujet.',
+    source: PROGRAMME,
+    citation: 'Remplacer un groupe nominal sujet par un pronom personnel sujet',
+  },
+  nomVerbe: {
+    type: 'savais-tu',
+    text: 'Un même mot peut changer de deux façons : « elles élèvent », mais « des élèves ».',
+    source: PROGRAMME,
+    citation:
+      'Distinguer les variations morphologiques du verbe de celles du nom (ex : il élève / tu élèves / elles élèvent vs une élève / des élèves)',
+  },
+} as const satisfies Record<string, Sens>;
 
 export const faitVs = (id: string): Fait => {
   const f = FAITS_VS.find((x) => x.id === id);
@@ -146,7 +184,7 @@ export const VERBES_REGULIERS: readonly VerbeInf[] = [
 /** Verbes irréguliers fréquents (niveau 4). */
 export const VERBES_IRREGULIERS: readonly VerbeInf[] = [
   { inf: 'aller', formes: ['je vais', 'tu vas', 'il va', 'nous allons', 'ils vont'] },
-  { inf: 'être', formes: ['je suis', 'tu es', 'il est', 'nous sommes', 'ils sont'] },
+  { inf: 'être', formes: ['tu es', 'il est', 'nous sommes', 'vous êtes', 'ils sont'] },
   { inf: 'avoir', formes: ['j’ai', 'tu as', 'il a', 'nous avons', 'ils ont'] },
   { inf: 'faire', formes: ['je fais', 'il fait', 'nous faisons', 'ils font', 'vous faites'] },
   { inf: 'prendre', formes: ['je prends', 'il prend', 'nous prenons', 'ils prennent'] },
@@ -171,24 +209,18 @@ export interface GroupeSujet {
 export const GROUPES_SUJETS: readonly GroupeSujet[] = [
   { gs: 'Le petit chat', noyau: 'chat', reste: 'dort sur le canapé', verbe: 'dort' },
   { gs: 'Mon frère aîné', noyau: 'frère', reste: 'range sa chambre', verbe: 'range' },
-  { gs: 'Les oiseaux du jardin', noyau: 'oiseaux', reste: 'chantent le matin', verbe: 'chantent' },
+  { gs: 'Les oiseaux bleus', noyau: 'oiseaux', reste: 'chantent très fort', verbe: 'chantent' },
   { gs: 'La maîtresse', noyau: 'maîtresse', reste: 'lit une histoire à la classe', verbe: 'lit' },
   { gs: 'Ma petite sœur', noyau: 'sœur', reste: 'joue du piano', verbe: 'joue' },
-  { gs: 'Les élèves de CM1', noyau: 'élèves', reste: 'entrent en classe', verbe: 'entrent' },
+  { gs: 'Les nouveaux élèves', noyau: 'élèves', reste: 'entrent en classe', verbe: 'entrent' },
   { gs: 'Un gros nuage gris', noyau: 'nuage', reste: 'cache le soleil', verbe: 'cache' },
-  { gs: 'Mes deux cousins', noyau: 'cousins', reste: 'habitent près de la mer', verbe: 'habitent' },
-  { gs: 'Le chien de mon voisin', noyau: 'chien', reste: 'aboie toute la nuit', verbe: 'aboie' },
+  { gs: 'Mes deux cousins', noyau: 'cousins', reste: 'jouent dans la cour', verbe: 'jouent' },
+  { gs: 'Le chien noir', noyau: 'chien', reste: 'aboie très fort', verbe: 'aboie' },
   { gs: 'Les petits poissons rouges', noyau: 'poissons', reste: 'nagent dans le bocal', verbe: 'nagent' },
 ];
 
 /** Groupes placés devant le sujet : ils disent quand, mais ne sont pas le sujet. */
-export const AVANT_SUJET: readonly string[] = [
-  'Ce matin,',
-  'Chaque jour,',
-  'Le mercredi,',
-  'En ce moment,',
-  'Souvent,',
-];
+export const AVANT_SUJET: readonly string[] = ['Ce matin,', 'Chaque jour,', 'Le mardi,', 'En ce moment,', 'Souvent,'];
 
 // ───────────────────────── Types de sujets ─────────────────────────
 
@@ -198,7 +230,7 @@ export interface Sujet {
   readonly s: string;
   readonly reste: string;
   readonly type: TypeSujet;
-  /** Pourquoi ce n'est pas « plusieurs noms » (groupe nominal avec un nom qui en complète un autre). */
+  /** Pourquoi ce n'est pas « plusieurs noms » (groupe nominal au pluriel, avec un adjectif). */
   readonly piege?: string;
 }
 
@@ -208,54 +240,65 @@ export const SUJETS: readonly Sujet[] = [
   { s: 'Ils', reste: 'jouent au ballon', type: 'pronom' },
   { s: 'Tu', reste: 'cours très vite', type: 'pronom' },
   { s: 'Je', reste: 'lis un livre', type: 'pronom' },
-  { s: 'Vous', reste: 'partez demain', type: 'pronom' },
+  { s: 'Vous', reste: 'partez en voyage', type: 'pronom' },
   { s: 'Le petit chat', reste: 'dort sur le canapé', type: 'gn' },
   { s: 'Ma sœur', reste: 'joue du piano', type: 'gn' },
-  { s: 'Les oiseaux', reste: 'chantent le matin', type: 'gn' },
+  { s: 'Les oiseaux', reste: 'chantent très fort', type: 'gn' },
   { s: 'La maîtresse', reste: 'lit une histoire', type: 'gn' },
   { s: 'Un gros nuage gris', reste: 'cache le soleil', type: 'gn' },
-  { s: 'Mes deux cousins', reste: 'habitent près de la mer', type: 'gn' },
+  { s: 'Mes deux cousins', reste: 'jouent aux cartes', type: 'gn' },
   { s: 'Mon père et ma mère', reste: 'préparent le repas', type: 'noms' },
-  { s: 'Le chat et le chien', reste: 'dorment ensemble', type: 'noms' },
+  { s: 'Le chat et le chien', reste: 'dorment sur le tapis', type: 'noms' },
   { s: 'Ma sœur et mon frère', reste: 'jouent au ballon', type: 'noms' },
-  { s: 'Le boulanger et le fleuriste', reste: 'ouvrent leur magasin', type: 'noms' },
-  { s: 'Mes cousins et mes cousines', reste: 'arrivent demain', type: 'noms' },
+  { s: 'Le boulanger et le fleuriste', reste: 'ouvrent la porte', type: 'noms' },
+  { s: 'Mes cousins et mes cousines', reste: 'arrivent à la maison', type: 'noms' },
   { s: 'Les filles, les garçons et la maîtresse', reste: 'partent en sortie', type: 'noms' },
 ];
 
-/** Groupes nominaux qui contiennent deux noms sans être « plusieurs noms » : un nom complète l'autre. */
+/** Groupes nominaux au pluriel avec un adjectif : plusieurs êtres ou choses, mais un seul nom. */
 export const SUJETS_PIEGES: readonly Sujet[] = [
   {
-    s: 'Les oiseaux du jardin',
-    reste: 'chantent le matin',
+    s: 'Les petits oiseaux',
+    reste: 'volent dans le ciel',
     type: 'gn',
-    piege: '« jardin » complète « oiseaux » (les oiseaux du jardin) : les deux noms ne sont pas reliés par « et ».',
+    piege: '« oiseaux » est au pluriel, mais c’est un seul nom : « petits » est un adjectif.',
   },
   {
-    s: 'Le chien de mon voisin',
-    reste: 'aboie toute la nuit',
+    s: 'Les chiens noirs',
+    reste: 'courent dans le pré',
     type: 'gn',
-    piege: '« voisin » complète « chien » (le chien de mon voisin) : les deux noms ne sont pas reliés par « et ».',
+    piege: '« chiens » est au pluriel, mais c’est un seul nom : « noirs » est un adjectif.',
   },
   {
-    s: 'Les élèves de CM1',
-    reste: 'entrent en classe',
+    s: 'Les jolies fleurs',
+    reste: 'poussent dans le jardin',
     type: 'gn',
-    piege: '« CM1 » complète « élèves » (les élèves de CM1) : les deux noms ne sont pas reliés par « et ».',
+    piege: '« fleurs » est au pluriel, mais c’est un seul nom : « jolies » est un adjectif.',
   },
   {
-    s: 'La maison de mes grands-parents',
-    reste: 'est près de la mer',
+    s: 'Les poissons rouges',
+    reste: 'tournent dans le bocal',
     type: 'gn',
-    piege: '« grands-parents » complète « maison » : les deux noms ne sont pas reliés par « et ».',
+    piege: '« poissons » est au pluriel, mais c’est un seul nom : « rouges » est un adjectif.',
   },
   {
-    s: 'Le cahier de ma sœur',
-    reste: 'est sur la table',
+    s: 'Les nouveaux voisins',
+    reste: 'ferment la porte',
     type: 'gn',
-    piege: '« sœur » complète « cahier » : les deux noms ne sont pas reliés par « et ».',
+    piege: '« voisins » est au pluriel, mais c’est un seul nom : « nouveaux » est un adjectif.',
   },
 ];
+
+/** Pas de « plusieurs noms » : « et » est après le verbe, pas dans le sujet. */
+export const SUJETS_ET_APRES_VERBE: readonly Sujet[] = [
+  { s: 'La maîtresse', reste: 'prend un livre et un stylo', type: 'gn' },
+  { s: 'Mon voisin', reste: 'achète du pain et du lait', type: 'gn' },
+  { s: 'Elle', reste: 'chante et danse', type: 'pronom' },
+  { s: 'Ils', reste: 'sautent et courent', type: 'pronom' },
+];
+
+/** Groupes placés devant le sujet dans les textes à trous : un moment précis, possible avec chaque phrase. */
+export const AVANT_TYPES: readonly string[] = ['Ce matin,', 'En ce moment,', 'Cet après-midi,'];
 
 export const TYPE_LABEL: Record<TypeSujet, string> = {
   pronom: 'un pronom personnel',
@@ -275,6 +318,13 @@ export interface NomVerbe {
   /** Phrase où le mot est un verbe (sujet il ou elle). */
   readonly verbe: string;
   readonly sujet: 'il' | 'elle';
+  /** Niveau 5 : deux phrases d'un même petit texte, qui commencent par le même mot. */
+  readonly texte: {
+    readonly nom: string;
+    readonly verbe: string;
+    /** Sujet et verbe de la phrase « verbe », tels qu'on les dit après « hier ». */
+    readonly hier: string;
+  };
 }
 
 export const NOMS_VERBES: readonly NomVerbe[] = [
@@ -285,6 +335,11 @@ export const NOMS_VERBES: readonly NomVerbe[] = [
     verbeDuNom: 'range',
     verbe: 'Il élève des lapins.',
     sujet: 'il',
+    texte: {
+      nom: 'Le maître aide un élève.',
+      verbe: 'Le fermier élève des lapins.',
+      hier: 'le fermier élevait',
+    },
   },
   {
     mot: 'ferme',
@@ -293,6 +348,11 @@ export const NOMS_VERBES: readonly NomVerbe[] = [
     verbeDuNom: 'est',
     verbe: 'Il ferme la porte.',
     sujet: 'il',
+    texte: {
+      nom: 'Le chien court vers la grande ferme.',
+      verbe: 'Le gardien ferme la grille.',
+      hier: 'le gardien fermait',
+    },
   },
   {
     mot: 'garde',
@@ -301,6 +361,11 @@ export const NOMS_VERBES: readonly NomVerbe[] = [
     verbeDuNom: 'ouvre',
     verbe: 'Elle garde son petit frère.',
     sujet: 'elle',
+    texte: {
+      nom: 'Mamie salue le vieux garde.',
+      verbe: 'Mamie garde les enfants.',
+      hier: 'Mamie gardait',
+    },
   },
   {
     mot: 'marche',
@@ -309,6 +374,11 @@ export const NOMS_VERBES: readonly NomVerbe[] = [
     verbeDuNom: 'est',
     verbe: 'Il marche vers l’école.',
     sujet: 'il',
+    texte: {
+      nom: 'La petite marche est cassée.',
+      verbe: 'La factrice marche vers la mairie.',
+      hier: 'la factrice marchait',
+    },
   },
   {
     mot: 'danse',
@@ -317,6 +387,11 @@ export const NOMS_VERBES: readonly NomVerbe[] = [
     verbeDuNom: 'est',
     verbe: 'Elle danse sur la scène.',
     sujet: 'elle',
+    texte: {
+      nom: 'Au bal, la dernière danse commence.',
+      verbe: 'Au bal, Lina danse.',
+      hier: 'Lina dansait',
+    },
   },
   {
     mot: 'pêche',
@@ -325,6 +400,11 @@ export const NOMS_VERBES: readonly NomVerbe[] = [
     verbeDuNom: 'est',
     verbe: 'Il pêche un gros poisson.',
     sujet: 'il',
+    texte: {
+      nom: 'Mon voisin mange une pêche.',
+      verbe: 'Mon voisin pêche dans la rivière.',
+      hier: 'mon voisin pêchait',
+    },
   },
   {
     mot: 'visite',
@@ -333,6 +413,11 @@ export const NOMS_VERBES: readonly NomVerbe[] = [
     verbeDuNom: 'commence',
     verbe: 'Elle visite le château.',
     sujet: 'elle',
+    texte: {
+      nom: 'La première visite commence.',
+      verbe: 'La classe visite le moulin.',
+      hier: 'la classe visitait',
+    },
   },
   {
     mot: 'rêve',
@@ -341,6 +426,11 @@ export const NOMS_VERBES: readonly NomVerbe[] = [
     verbeDuNom: 'est',
     verbe: 'Elle rêve de voyage.',
     sujet: 'elle',
+    texte: {
+      nom: 'Au lit, Tom raconte son beau rêve.',
+      verbe: 'Au lit, Tom rêve de voyages.',
+      hier: 'Tom rêvait',
+    },
   },
   {
     mot: 'joue',
@@ -349,6 +439,11 @@ export const NOMS_VERBES: readonly NomVerbe[] = [
     verbeDuNom: 'est',
     verbe: 'Elle joue au ballon.',
     sujet: 'elle',
+    texte: {
+      nom: 'Sur la place, le froid pique sa joue.',
+      verbe: 'Sur la place, Zoé joue au ballon.',
+      hier: 'Zoé jouait',
+    },
   },
   {
     mot: 'plante',
@@ -357,6 +452,11 @@ export const NOMS_VERBES: readonly NomVerbe[] = [
     verbeDuNom: 'a',
     verbe: 'Il plante un arbre.',
     sujet: 'il',
+    texte: {
+      nom: 'Le jardinier arrose la plante.',
+      verbe: 'Le jardinier plante un arbre.',
+      hier: 'le jardinier plantait',
+    },
   },
   {
     mot: 'porte',
@@ -365,6 +465,11 @@ export const NOMS_VERBES: readonly NomVerbe[] = [
     verbeDuNom: 'est',
     verbe: 'Il porte un sac.',
     sujet: 'il',
+    texte: {
+      nom: 'Il repeint la porte.',
+      verbe: 'Il prend le sac et le porte.',
+      hier: 'il le portait',
+    },
   },
   {
     mot: 'cuisine',
@@ -373,6 +478,11 @@ export const NOMS_VERBES: readonly NomVerbe[] = [
     verbeDuNom: 'sent',
     verbe: 'Il cuisine un gâteau.',
     sujet: 'il',
+    texte: {
+      nom: 'À midi, papi lave la grande cuisine.',
+      verbe: 'À midi, papi cuisine un gâteau.',
+      hier: 'papi cuisinait',
+    },
   },
   {
     mot: 'brosse',
@@ -381,5 +491,10 @@ export const NOMS_VERBES: readonly NomVerbe[] = [
     verbeDuNom: 'est',
     verbe: 'Elle brosse ses cheveux.',
     sujet: 'elle',
+    texte: {
+      nom: 'Elle cherche sa petite brosse.',
+      verbe: 'Elle voit son chien et le brosse.',
+      hier: 'elle le brossait',
+    },
   },
 ];

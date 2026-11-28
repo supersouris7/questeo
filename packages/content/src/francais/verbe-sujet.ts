@@ -1,16 +1,19 @@
 import { choice, num, traps as numTraps } from '../build.ts';
 import { r } from '../rational.ts';
 import type { Rng } from '../rng.ts';
-import type { Level, QuestionDraft, Skill, Trap } from '../types.ts';
+import type { Level, QuestionDraft, Sens, Skill, Trap } from '../types.ts';
 import {
   AVANT_SUJET,
+  AVANT_TYPES,
   GROUPES_SUJETS,
   NOMS_VERBES,
   PHRASES_DOUBLES,
   PHRASES_INFINITIF,
   PHRASES_NEGATIVES,
   PHRASES_SIMPLES,
+  SENS_VS,
   SUJETS,
+  SUJETS_ET_APRES_VERBE,
   SUJETS_PIEGES,
   TYPE_LABEL,
   VERBES_IRREGULIERS,
@@ -23,7 +26,7 @@ import {
   type Sujet,
   type TypeSujet,
 } from './verbe-sujet.donnees.ts';
-import { at, document, lowerFirst, pickN, same, textTrap } from './outils.ts';
+import { at, document, listes, lowerFirst, pickN, same, segments, textTrap } from './outils.ts';
 
 /**
  * Chapitre « Le verbe et le sujet » (CM1). Programme de français du cycle 3 (BO du 17 avril 2025),
@@ -79,9 +82,15 @@ function otherWords(phrase: readonly Mot[], order: readonly string[]): Mot[] {
 const textTraps = (words: readonly Mot[], n: number): Trap[] =>
   words.slice(0, n).map((m) => textTrap(m.text, whyNotVerb(m)));
 
-const STEPS_VERBE = [
-  'Le verbe dit ce que fait quelqu’un. C’est le mot qui change avec le sujet et le temps.',
-  'Pour le repérer, je mets la phrase au passé avec « hier » : le mot qui change, c’est le verbe.',
+/** Les écritures d'une réponse : telle quelle, sans accent circonflexe sur i ou u, sans aucun accent. */
+const ecritures = (s: string): string[] => [
+  ...new Set([s, s.replace(/î/g, 'i').replace(/û/g, 'u'), s.normalize('NFD').replace(/\p{M}/gu, '')]),
+];
+
+const stepsVerbe = (phrase: readonly Mot[], action: 'Choisis' | 'Écris') => [
+  `Lis la phrase : « ${withDot(phrase)} »`,
+  'Ajoute « hier » devant. Repère le mot qui change.',
+  `${action} ce verbe : **${verbOf(phrase).text}**.`,
 ];
 
 function verbeDraft(rng: Rng, level: Level): QuestionDraft {
@@ -97,11 +106,11 @@ function verbeDraft(rng: Rng, level: Level): QuestionDraft {
         [noun, other].map((m) => ({ label: m.text, why: whyNotVerb(m) })),
       );
       return {
-        prompt: `Quel mot est le verbe de cette phrase ? « ${withDot(phrase)} »`,
+        prompt: `Choisis le verbe de cette phrase : « ${withDot(phrase)} »`,
         answer,
         traps,
-        hint: 'Cherche le mot qui dit ce que fait quelqu’un. Il change si tu commences la phrase par « hier ».',
-        steps: [...STEPS_VERBE, `Ici, c’est **${verbe.text}**.`],
+        hint: 'Cherche le mot qui dit ce que fait quelqu’un.',
+        steps: stepsVerbe(phrase, 'Choisis'),
       };
     }
     case 2: {
@@ -116,11 +125,11 @@ function verbeDraft(rng: Rng, level: Level): QuestionDraft {
         wrong.map((m) => ({ label: m.text, why: whyNotVerb(m) })),
       );
       return {
-        prompt: `Trouve le verbe conjugué de cette phrase : « ${withDot(phrase)} »`,
+        prompt: `Choisis le verbe conjugué de cette phrase : « ${withDot(phrase)} »`,
         answer,
         traps,
-        hint: 'Ajoute « hier » au début de la phrase : un seul mot change.',
-        steps: [...STEPS_VERBE, `Le verbe conjugué est **${verbe.text}**.`],
+        hint: 'Ajoute « hier » au début : un seul mot change.',
+        steps: stepsVerbe(phrase, 'Choisis'),
       };
     }
     case 3: {
@@ -130,52 +139,64 @@ function verbeDraft(rng: Rng, level: Level): QuestionDraft {
         prompt: `Écris le verbe conjugué de cette phrase : « ${withDot(phrase)} »`,
         answer: { kind: 'text', accepted: [verbe.text] },
         traps: textTraps(otherWords(phrase, ['n', 'p', 'd', 'a']), 2),
-        hint: 'Cherche le mot qui change quand tu commences la phrase par « hier ».',
-        steps: [...STEPS_VERBE, `Le verbe conjugué est **${verbe.text}**.`],
+        hint: 'Cherche le mot qui change si tu commences par « hier ».',
+        steps: stepsVerbe(phrase, 'Écris'),
       };
     }
     case 4: {
       const negative = rng.int(0, 1) === 1;
       const phrase = rng.pick(negative ? PHRASES_NEGATIVES : PHRASES_INFINITIF);
       const verbe = verbOf(phrase);
+      const apres = phrase[phrase.indexOf(verbe) + 1]?.text ?? '';
+      const avant = phrase[phrase.indexOf(verbe) - 1]?.text ?? '';
+      const infinitif = phrase.find((m) => m.tag === 'i')?.text ?? '';
       return {
-        prompt: `Dans cette phrase, quel est le verbe conjugué ? Écris-le. « ${withDot(phrase)} »`,
+        prompt: `Attention, il y a un piège. Écris le verbe conjugué : « ${withDot(phrase)} »`,
         answer: { kind: 'text', accepted: [verbe.text] },
         traps: textTraps(otherWords(phrase, negative ? ['a', 'n', 'p'] : ['i', 'n', 'p']), 2),
         hint: negative
-          ? 'Dans une phrase négative, le verbe est entouré de deux petits mots, mais il ne se confond pas avec eux.'
-          : 'Il y a deux verbes. Un seul change avec le sujet : l’autre garde toujours la même forme.',
+          ? 'Regarde les deux petits mots de la négation. Cherche entre eux.'
+          : 'Il y a deux verbes. Cherche celui qui change avec « hier ».',
         steps: negative
           ? [
-              'Dans une phrase négative, deux petits mots entourent le verbe : « ne » avant, « pas » (ou « plus », « jamais ») après.',
-              'Je les mets de côté : le verbe est le mot qui reste entre les deux.',
-              `Le verbe conjugué est **${verbe.text}**.`,
+              `Repère « ${avant} » : le verbe vient juste après.`,
+              `Repère « ${apres} » : le verbe est juste avant.`,
+              `Écris le mot placé entre les deux : **${verbe.text}**.`,
             ]
           : [
-              'Il y a deux verbes. Un seul est conjugué : il change avec le sujet.',
-              'L’autre est à l’infinitif : il ne change jamais.',
-              `Le verbe conjugué est **${verbe.text}**.`,
+              'Ajoute « hier » devant la phrase. Observe les deux verbes.',
+              `Écarte « ${infinitif} » : il ne change pas.`,
+              `Écris le verbe conjugué : **${verbe.text}**.`,
             ],
       };
     }
     default: {
-      const lines = pickN(rng, [...PHRASES_SIMPLES, ...PHRASES_INFINITIF, ...PHRASES_NEGATIVES, ...PHRASES_DOUBLES], 4);
+      // Toujours un infinitif à écarter ; de zéro à deux phrases à deux verbes.
+      const doubles = rng.int(0, 2);
+      const avecInfinitif = rng.pick(PHRASES_INFINITIF);
+      const lines = rng.shuffle([
+        avecInfinitif,
+        ...pickN(rng, PHRASES_DOUBLES, doubles),
+        ...pickN(rng, [...PHRASES_SIMPLES, ...PHRASES_NEGATIVES], 3 - doubles),
+      ]);
       const count = (tag: Mot['tag']) => lines.reduce((n, l) => n + l.filter((m) => m.tag === tag).length, 0);
       const k = count('v');
+      const infinitif = avecInfinitif.find((m) => m.tag === 'i')?.text ?? '';
       return {
-        prompt: 'Lis ce texte. Combien de verbes conjugués contient-il en tout ?',
+        prompt: 'Lis ce texte. Compte tous les verbes conjugués.',
         figure: document('Quelques phrases', lines.map(withDot)),
         answer: num(k),
         traps: numTraps(r(k), [
-          [k + count('i'), 'Tu as compté aussi les verbes à l’infinitif. Seuls les verbes conjugués comptent.'],
+          [k + count('i'), 'Tu as compté aussi le verbe à l’infinitif. Seuls les verbes conjugués comptent.'],
           [lines.length, 'Tu as compté une phrase = un verbe. Certaines phrases ont deux verbes conjugués.'],
-          [k - 1, 'Il t’en manque un : relis chaque ligne et cherche tous les mots qui changent avec le sujet.'],
+          [k - 1, 'Il t’en manque un : relis chaque ligne et ajoute « hier » devant.'],
         ]),
-        hint: 'Compte les verbes ligne par ligne. Dans « Je veux manger », un seul verbe est conjugué.',
+        hint: 'Compte ligne par ligne. Une ligne peut avoir deux verbes conjugués.',
         steps: [
-          'Je lis chaque ligne et je cherche les mots qui changent avec le sujet.',
-          'Je ne compte pas les verbes à l’infinitif : ils ne sont pas conjugués.',
-          `Je compte les verbes conjugués : **${k}**.`,
+          'Lis chaque ligne en ajoutant « hier » devant.',
+          'Repère chaque mot qui change : c’est un verbe conjugué.',
+          `Écarte « ${infinitif} » : cet infinitif ne change pas.`,
+          `Compte les verbes conjugués : **${k}**.`,
         ],
       };
     }
@@ -194,10 +215,10 @@ const whyBare = (bare: string) =>
   `« ${bare} » est le verbe conjugué, comme dans la phrase. L’infinitif ne change jamais avec le sujet.`;
 const whyOtherVerb = (other: string, form: string) => `« ${other} » est un autre verbe : « ${form} » n’en vient pas.`;
 
-const STEPS_INF = (inf: string) => [
-  'L’infinitif, c’est le nom du verbe : celui qu’on cherche dans le dictionnaire.',
-  `Pour le retrouver, je dis « il faut… » devant : il faut ${inf}.`,
-  `L’infinitif est **${inf}**.`,
+const stepsInf = (form: string, inf: string, action: 'Choisis' | 'Écris') => [
+  `Lis le verbe : « ${form} ».`,
+  `Pose « il faut » devant : « il faut ${inf} ».`,
+  `${action} l’infinitif : **${inf}**.`,
 ];
 
 function infinitifDraft(rng: Rng, level: Level): QuestionDraft {
@@ -216,11 +237,11 @@ function infinitifDraft(rng: Rng, level: Level): QuestionDraft {
         others.map((o) => ({ label: o.inf, why: whyOtherVerb(o.inf, form) })),
       );
       return {
-        prompt: `Quel est l’infinitif du verbe dans « ${form} » ?`,
+        prompt: `Choisis l’infinitif du verbe dans « ${form} ».`,
         answer,
         traps,
-        hint: 'Dis « il faut… » devant le verbe, puis cherche la forme qui va avec.',
-        steps: STEPS_INF(v.inf),
+        hint: 'Cherche le verbe qui ressemble à celui que tu lis.',
+        steps: stepsInf(form, v.inf, 'Choisis'),
       };
     }
     case 2: {
@@ -237,11 +258,11 @@ function infinitifDraft(rng: Rng, level: Level): QuestionDraft {
         ...others.map((o) => ({ label: o.inf, why: whyOtherVerb(o.inf, form) })),
       ]);
       return {
-        prompt: `Retrouve l’infinitif de « ${form} » : choisis la bonne proposition.`,
+        prompt: `Retrouve l’infinitif du verbe dans « ${form} ».`,
         answer,
         traps,
-        hint: 'L’infinitif ne change pas avec le sujet. Il se termine souvent par -er ou -ir.',
-        steps: STEPS_INF(v.inf),
+        hint: 'Essaie « il faut » devant chaque proposition. Attention au verbe conjugué.',
+        steps: stepsInf(form, v.inf, 'Choisis'),
       };
     }
     case 3: {
@@ -250,7 +271,7 @@ function infinitifDraft(rng: Rng, level: Level): QuestionDraft {
       const bare = lastWord(form);
       return {
         prompt: `Écris l’infinitif de « ${form} ».`,
-        answer: { kind: 'text', accepted: [v.inf] },
+        answer: { kind: 'text', accepted: ecritures(v.inf) },
         traps: [
           textTrap(bare, whyBare(bare)),
           textTrap(
@@ -258,8 +279,8 @@ function infinitifDraft(rng: Rng, level: Level): QuestionDraft {
             `« ${participe(v.inf)} » ressemble à l’infinitif, mais ce n’est pas lui : l’infinitif de ce verbe se termine par ${ending(v.inf)}.`,
           ),
         ],
-        hint: 'Dis « il faut… » devant : le verbe se termine par -er ou -ir.',
-        steps: STEPS_INF(v.inf),
+        hint: 'Pense à « il faut » : le verbe finit par -er ou -ir.',
+        steps: stepsInf(form, v.inf, 'Écris'),
       };
     }
     case 4: {
@@ -268,33 +289,38 @@ function infinitifDraft(rng: Rng, level: Level): QuestionDraft {
       const bare = lastWord(form);
       const other = rng.pick(VERBES_IRREGULIERS.filter((o) => o.inf !== v.inf));
       return {
-        prompt: `Quel est l’infinitif de « ${form} » ? Écris-le.`,
-        answer: { kind: 'text', accepted: [v.inf] },
+        prompt: `Ce verbe change beaucoup. Écris l’infinitif de « ${form} ».`,
+        answer: { kind: 'text', accepted: ecritures(v.inf) },
         traps: [textTrap(bare, whyBare(bare)), textTrap(other.inf, whyOtherVerb(other.inf, form))],
-        hint: 'Même quand le verbe change beaucoup, tu peux dire « il faut… » devant pour retrouver l’infinitif.',
-        steps: STEPS_INF(v.inf),
+        hint: 'Pense à « il faut » : quel verbe viendrait juste après ?',
+        steps: stepsInf(form, v.inf, 'Écris'),
       };
     }
     default: {
-      const phrase = rng.pick([...PHRASES_SIMPLES, ...PHRASES_NEGATIVES]);
+      const phrase = rng.pick([...PHRASES_SIMPLES, ...PHRASES_NEGATIVES, ...PHRASES_INFINITIF]);
       const verbe = verbOf(phrase);
       const inf = verbe.inf ?? '';
-      const noun = at(otherWords(phrase, ['n', 'p', 'd', 'a']), 0);
+      const autre = phrase.find((m) => m.tag === 'i') ?? at(otherWords(phrase, ['n', 'p', 'd', 'a']), 0);
       return {
-        prompt: `Trouve le verbe conjugué de cette phrase, puis écris son infinitif : « ${withDot(phrase)} »`,
-        answer: { kind: 'text', accepted: [inf] },
+        prompt: `Trouve le verbe conjugué, puis écris son infinitif : « ${withDot(phrase)} »`,
+        answer: { kind: 'text', accepted: ecritures(inf) },
         traps: [
           textTrap(
             verbe.text,
             `« ${verbe.text} » est le verbe conjugué, tel qu’il est écrit dans la phrase. On demande son infinitif.`,
           ),
-          textTrap(noun.text, whyNotVerb(noun)),
+          textTrap(
+            autre.text,
+            autre.tag === 'i'
+              ? `« ${autre.text} » est l’infinitif de l’autre verbe. Cherche d’abord le verbe qui change.`
+              : whyNotVerb(autre),
+          ),
         ],
-        hint: 'D’abord, trouve le mot qui change avec le sujet. Ensuite, dis « il faut… » devant.',
+        hint: 'Trouve le mot qui change avec « hier ». Pense ensuite à « il faut ».',
         steps: [
-          `Je cherche le verbe conjugué : c’est « ${verbe.text} ».`,
-          `Je dis « il faut… » devant : il faut ${inf}.`,
-          `L’infinitif est **${inf}**.`,
+          `Ajoute « hier » devant. Repère le mot qui change : « ${verbe.text} ».`,
+          `Pose « il faut » devant : « il faut ${inf} ».`,
+          `Écris l’infinitif : **${inf}**.`,
         ],
       };
     }
@@ -314,18 +340,22 @@ const SINGULIER: Record<string, string> = {
 };
 const quiReste = (reste: string): string => {
   const [mot = '', ...suite] = reste.split(' ');
-  const sing = SINGULIER[mot] ?? (mot.endsWith('ent') ? mot.slice(0, -1) : mot);
+  const sing = SINGULIER[mot] ?? (mot.endsWith('ent') ? mot.slice(0, -2) : mot);
   return [sing, ...suite].join(' ');
 };
 
 const phraseGs = (g: GroupeSujet, pre?: string) =>
   pre ? `${pre} ${lowerFirst(g.gs)} ${g.reste}.` : `${g.gs} ${g.reste}.`;
 
-const stepsGs = (g: GroupeSujet) => [
-  'Le sujet dit qui fait l’action. Je pose la question « Qui est-ce qui… ? » devant le verbe.',
-  `Qui est-ce qui ${quiReste(g.reste)} ? C’est ${lowerFirst(g.gs)}.`,
-  `Le groupe sujet est **${g.gs}**.`,
+/** Les bulles communes : le verbe, la question, la réponse ; un groupe qui dit quand est d'abord effacé. */
+const stepsGs = (g: GroupeSujet, action: 'Choisis' | 'Écris', pre?: string) => [
+  pre ? `Efface « ${pre.slice(0, -1)} » : ce groupe dit quand.` : `Trouve le verbe : « ${g.verbe} ».`,
+  `Pose la question : « Qui est-ce qui ${quiReste(g.reste)} ? »`,
+  `${action} tous les mots de la réponse : **${g.gs}**.`,
 ];
+
+/** Le groupe sujet, avec ou sans accents (la notion ne porte pas sur eux). */
+const sujetAccepte = (g: GroupeSujet) => ecritures(g.gs);
 
 const whyNoyau = (g: GroupeSujet) =>
   `« ${g.noyau} » est seulement le nom principal. Le groupe sujet comprend aussi les mots qui l’accompagnent.`;
@@ -343,11 +373,11 @@ function sujetDraft(rng: Rng, level: Level): QuestionDraft {
         { label: g.verbe, why: `« ${g.verbe} » est le verbe, pas le sujet. Le sujet dit qui fait l’action.` },
       ]);
       return {
-        prompt: `Quel est le groupe sujet de cette phrase ? « ${phraseGs(g)} »`,
+        prompt: `Choisis le groupe sujet de cette phrase : « ${phraseGs(g)} »`,
         answer,
         traps,
-        hint: 'Demande-toi « Qui est-ce qui… ? » en citant le verbe.',
-        steps: stepsGs(g),
+        hint: 'Demande-toi qui fait l’action.',
+        steps: stepsGs(g, 'Choisis'),
       };
     }
     case 2: {
@@ -358,25 +388,25 @@ function sujetDraft(rng: Rng, level: Level): QuestionDraft {
         { label: g.reste, why: whyReste(g) },
       ]);
       return {
-        prompt: `Choisis le groupe sujet complet de la phrase : « ${phraseGs(g)} »`,
+        prompt: `Repère le groupe sujet complet : « ${phraseGs(g)} »`,
         answer,
         traps,
-        hint: 'Le groupe sujet contient le nom noyau et tous les mots qui l’accompagnent, mais pas le verbe.',
-        steps: stepsGs(g),
+        hint: 'Garde tous les mots du sujet. Laisse le verbe de côté.',
+        steps: stepsGs(g, 'Choisis'),
       };
     }
     case 3: {
       const g = rng.pick(GROUPES_SUJETS);
       return {
         prompt: `Écris le groupe sujet de cette phrase : « ${phraseGs(g)} »`,
-        answer: { kind: 'text', accepted: [g.gs] },
+        answer: { kind: 'text', accepted: sujetAccepte(g) },
         traps: [
           textTrap(g.noyau, whyNoyau(g)),
           textTrap(`${g.gs} ${g.verbe}`, whyAvecVerbe(g)),
           textTrap(g.reste, whyReste(g)),
         ],
-        hint: 'Pose la question « Qui est-ce qui… ? » devant le verbe, ou encadre avec « c’est… qui ».',
-        steps: stepsGs(g),
+        hint: 'Pose « Qui est-ce qui » devant le verbe.',
+        steps: stepsGs(g, 'Écris'),
       };
     }
     case 4: {
@@ -384,8 +414,8 @@ function sujetDraft(rng: Rng, level: Level): QuestionDraft {
       const pre = rng.pick(AVANT_SUJET);
       const preSansVirgule = pre.slice(0, -1);
       return {
-        prompt: `Dans cette phrase, quel est le groupe sujet ? Écris-le. « ${phraseGs(g, pre)} »`,
-        answer: { kind: 'text', accepted: [g.gs, lowerFirst(g.gs)] },
+        prompt: `Écris le groupe sujet. Attention au début ! « ${phraseGs(g, pre)} »`,
+        answer: { kind: 'text', accepted: sujetAccepte(g) },
         traps: [
           textTrap(
             preSansVirgule,
@@ -393,18 +423,16 @@ function sujetDraft(rng: Rng, level: Level): QuestionDraft {
           ),
           textTrap(g.noyau, whyNoyau(g)),
         ],
-        hint: 'Un groupe placé avant le sujet, avec une virgule, dit quand. Supprime-le pour voir ce qui reste.',
-        steps: [
-          `« ${preSansVirgule} » dit quand : je peux le supprimer, ce n’est pas le sujet.`,
-          `Il reste : ${phraseGs(g)} Qui est-ce qui ${quiReste(g.reste)} ? C’est ${lowerFirst(g.gs)}.`,
-          `Le groupe sujet est **${g.gs}**.`,
-        ],
+        hint: 'Supprime le groupe qui dit quand. Regarde ce qui reste.',
+        steps: stepsGs(g, 'Écris', pre),
       };
     }
     default: {
       const gs = pickN(rng, GROUPES_SUJETS, 3);
-      const pres = gs.map(() => (rng.int(0, 1) === 0 ? undefined : rng.pick(AVANT_SUJET)));
       const t = rng.int(0, 2);
+      // La ligne demandée commence toujours par un groupe qui dit quand.
+      const pre = rng.pick(AVANT_SUJET);
+      const pres = gs.map((_, i) => (i === t ? pre : rng.int(0, 1) === 0 ? undefined : rng.pick(AVANT_SUJET)));
       const g = at(gs, t);
       const autre = at(gs, (t + 1 + rng.int(0, 1)) % 3);
       return {
@@ -413,17 +441,14 @@ function sujetDraft(rng: Rng, level: Level): QuestionDraft {
           'Un petit texte',
           gs.map((x, i) => phraseGs(x, pres[i])),
         ),
-        answer: { kind: 'text', accepted: [g.gs, lowerFirst(g.gs)] },
+        answer: { kind: 'text', accepted: sujetAccepte(g) },
         traps: [
           textTrap(g.noyau, whyNoyau(g)),
+          textTrap(pre.slice(0, -1), `« ${pre.slice(0, -1)} » dit quand : ce n’est pas le sujet.`),
           textTrap(autre.gs, 'C’est le sujet d’une autre ligne. Relis bien la ligne demandée.'),
         ],
-        hint: 'Lis seulement la bonne ligne, puis pose la question « Qui est-ce qui… ? » devant son verbe.',
-        steps: [
-          `Je lis la ligne ${t + 1} : « ${phraseGs(g, pres[t])} »`,
-          `Qui est-ce qui ${quiReste(g.reste)} ? C’est ${lowerFirst(g.gs)}.`,
-          `Le groupe sujet est **${g.gs}**.`,
-        ],
+        hint: 'Lis seulement la bonne ligne. Cherche qui fait l’action.',
+        steps: [`Lis seulement la ligne ${t + 1}.`, ...stepsGs(g, 'Écris', pre)],
       };
     }
   }
@@ -436,19 +461,14 @@ const OPTION_LABEL: Record<TypeSujet, string> = {
   gn: 'un groupe nominal (un nom avec son déterminant)',
   noms: 'plusieurs noms (reliés par « et » ou une virgule)',
 };
-const ACCEPTED_TYPE: Record<TypeSujet, readonly string[]> = {
-  pronom: ['pronom personnel', 'pronom', 'un pronom', 'un pronom personnel'],
-  gn: ['groupe nominal', 'un groupe nominal', 'gn'],
-  noms: ['plusieurs noms', 'des noms', 'noms'],
-};
 const TYPES: readonly TypeSujet[] = ['pronom', 'gn', 'noms'];
 
 /** Pourquoi le sujet n'est pas de ce type (faux) alors qu'il est de l'autre (vrai). */
 const WHY_TYPE: Record<TypeSujet, Record<TypeSujet, string>> = {
   pronom: {
     pronom: '',
-    gn: 'Il n’y a aucun nom ici : le sujet est un petit mot qui remplace un nom.',
-    noms: 'Il n’y a aucun nom ici : le sujet est un petit mot qui remplace un nom.',
+    gn: 'Il n’y a aucun nom dans le sujet : c’est un seul petit mot, un pronom.',
+    noms: 'Il n’y a aucun nom dans le sujet : c’est un seul petit mot, un pronom.',
   },
   gn: {
     pronom: 'Le sujet n’est pas un petit mot comme il, elle, nous : il contient un nom.',
@@ -461,20 +481,61 @@ const WHY_TYPE: Record<TypeSujet, Record<TypeSujet, string>> = {
     noms: '',
   },
 };
+/** « est un pronom personnel », « est formé de plusieurs noms »… */
+const EST_UN: Record<TypeSujet, string> = {
+  pronom: 'un pronom personnel',
+  gn: 'un groupe nominal',
+  noms: 'formé de plusieurs noms',
+};
 const whyType = (s: Sujet, wrong: TypeSujet) =>
-  `Le sujet « ${s.s} » n’est pas ${TYPE_LABEL[wrong]}. ${WHY_TYPE[s.type][wrong]}`;
+  `Le sujet « ${s.s} » n’est pas ${EST_UN[wrong]}. ${WHY_TYPE[s.type][wrong]}`;
 const phraseS = (s: Sujet, pre?: string) => (pre ? `${pre} ${lowerFirst(s.s)} ${s.reste}.` : `${s.s} ${s.reste}.`);
 const byType = (type: TypeSujet) => SUJETS.filter((s) => s.type === type);
 
+/** La bulle qui fait regarder les noms du sujet. */
+const observeType = (s: Sujet): string => {
+  if (s.type === 'pronom') return `Cherche un nom dans « ${s.s} » : aucun, donc c’est un pronom.`;
+  if (s.type === 'noms') return `Compte les noms de « ${s.s} » : plusieurs, donc « plusieurs noms ».`;
+  return `Compte les noms de « ${s.s} » : un seul, donc un groupe nominal.`;
+};
+
 const stepsType = (s: Sujet) => [
-  `Je trouve le sujet : qui est-ce qui ${quiReste(s.reste)} ? C’est « ${lowerFirst(s.s)} ».`,
-  s.type === 'pronom'
-    ? 'C’est un petit mot qui remplace un nom (il, elle, nous…) : un pronom personnel.'
-    : s.type === 'gn'
-      ? 'Il y a un seul nom, avec son déterminant : un groupe nominal.'
-      : 'Il y a plusieurs noms reliés par « et » ou une virgule.',
-  `Le sujet est **${TYPE_LABEL[s.type]}**.`,
+  `Pose la question : « Qui est-ce qui ${quiReste(s.reste)} ? »`,
+  `Repère le sujet : « ${s.s} ».`,
+  observeType(s),
+  `Choisis la réponse : **${TYPE_LABEL[s.type]}**.`,
 ];
+
+/** Texte à trous des niveaux 3 et 4 : une liste des trois types par phrase, sans leur définition. */
+function trousTypes(rng: Rng, avecQuand: boolean): QuestionDraft {
+  const sujets = pickN(rng, SUJETS, 3);
+  const quand = rng.shuffle(AVANT_TYPES);
+  const pres = sujets.map((_, i) => (avecQuand ? at(quand, i) : undefined));
+  const reponses = sujets.map((s) => TYPE_LABEL[s.type]);
+  return {
+    prompt: `${avecQuand ? 'Attention au début ! ' : 'Lis ce texte. '}Choisis le type du sujet de chaque phrase.`,
+    figure: document(
+      'Trois phrases',
+      sujets.map((s, i) => phraseS(s, pres[i])),
+    ),
+    answer: {
+      kind: 'cloze',
+      parts: segments(sujets.map((_, i) => `Phrase ${i + 1} : `)),
+      blanks: listes(Object.values(TYPE_LABEL), reponses),
+    },
+    hint: avecQuand
+      ? 'Efface le groupe qui dit quand. Cherche ensuite qui fait l’action.'
+      : 'Cherche chaque sujet avec « Qui est-ce qui ». Compte ensuite ses noms.',
+    steps: [
+      ...sujets.map((s, i) => {
+        const pre = pres[i];
+        const efface = pre ? `efface « ${pre.slice(0, -1)} ». ` : '';
+        return `Phrase ${i + 1} : ${efface}${observeType(s)}`;
+      }),
+      `Choisis dans l’ordre : **${reponses.join(' ; ')}**.`,
+    ],
+  };
+}
 
 function typesSujetsDraft(rng: Rng, level: Level): QuestionDraft {
   switch (level) {
@@ -486,10 +547,10 @@ function typesSujetsDraft(rng: Rng, level: Level): QuestionDraft {
         TYPES.filter((t) => t !== s.type).map((t) => ({ label: OPTION_LABEL[t], why: whyType(s, t) })),
       );
       return {
-        prompt: `Dans « ${phraseS(s)} », le sujet est « ${s.s} ». De quelle sorte de sujet s’agit-il ?`,
+        prompt: `Dans « ${phraseS(s)} », le sujet est « ${s.s} ». Choisis son type.`,
         answer,
         traps,
-        hint: 'Cherche s’il y a un nom, et combien. Un pronom, lui, remplace un nom.',
+        hint: 'Cherche s’il y a un nom, et combien.',
         steps: stepsType(s),
       };
     }
@@ -502,13 +563,8 @@ function typesSujetsDraft(rng: Rng, level: Level): QuestionDraft {
         3,
       );
       const options = rng.shuffle([good, ...wrong]);
-      const label: Record<TypeSujet, string> = {
-        pronom: 'est un pronom personnel',
-        gn: 'est un groupe nominal',
-        noms: 'est formé de plusieurs noms',
-      };
       return {
-        prompt: `Dans quelle phrase le sujet ${label[target]} ?`,
+        prompt: `Choisis la phrase où le sujet est ${EST_UN[target]}.`,
         answer: { kind: 'choice', options: options.map((s) => phraseS(s)), correct: options.indexOf(good) },
         traps: options.flatMap((s, i) =>
           s === good
@@ -516,59 +572,37 @@ function typesSujetsDraft(rng: Rng, level: Level): QuestionDraft {
             : [
                 {
                   option: i,
-                  why: `Dans cette phrase, le sujet « ${s.s} » est ${TYPE_LABEL[s.type]}, pas ${TYPE_LABEL[target]}.`,
+                  why: `Dans cette phrase, le sujet « ${s.s} » est ${EST_UN[s.type]}, pas ${EST_UN[target]}.`,
                 },
               ],
         ),
-        hint: 'Pour chaque phrase, trouve le sujet avec « Qui est-ce qui… ? », puis regarde s’il contient un nom, plusieurs ou aucun.',
+        hint: 'Trouve le sujet de chaque phrase. Compte ensuite ses noms.',
         steps: [
-          'Je cherche le sujet de chaque phrase avec « Qui est-ce qui… ? ».',
-          `Je garde celui qui ${label[target]}.`,
-          `La bonne phrase est : **${phraseS(good)}**`,
+          'Cherche le sujet de chaque phrase avec « Qui est-ce qui ».',
+          observeType(good),
+          `Choisis cette phrase : **${phraseS(good)}**`,
         ],
       };
     }
-    case 3: {
-      const s = rng.pick(SUJETS);
-      return {
-        prompt: `Trouve le sujet de cette phrase, puis écris sa sorte (pronom personnel, groupe nominal ou plusieurs noms) : « ${phraseS(s)} »`,
-        answer: { kind: 'text', accepted: ACCEPTED_TYPE[s.type] },
-        traps: TYPES.filter((t) => t !== s.type).map((t) => textTrap(at(ACCEPTED_TYPE[t], 0), whyType(s, t))),
-        hint: 'Trouve d’abord le sujet. Compte ensuite les noms : aucun, un seul, ou plusieurs.',
-        steps: stepsType(s),
-      };
-    }
-    case 4: {
-      const type = rng.pick(TYPES);
-      const s = type === 'gn' ? rng.pick(SUJETS_PIEGES) : rng.pick(byType(type));
-      const pre = rng.pick(AVANT_SUJET);
-      const piege = s.piege;
-      const wrongs = TYPES.filter((t) => t !== type);
-      return {
-        prompt: `Quelle est la sorte du sujet (pronom personnel, groupe nominal ou plusieurs noms) ? Écris-la. « ${phraseS(s, pre)} »`,
-        answer: { kind: 'text', accepted: ACCEPTED_TYPE[type] },
-        traps: wrongs.map((t) =>
-          textTrap(at(ACCEPTED_TYPE[t], 0), t === 'noms' && piege ? `${whyType(s, t)} ${piege}` : whyType(s, t)),
-        ),
-        hint: 'Supprime d’abord le groupe qui dit quand. Puis compte les noms du sujet : un nom qui en complète un autre ne compte pas à part.',
-        steps: [
-          `Je mets de côté « ${pre.slice(0, -1)} » : il dit quand, ce n’est pas le sujet.`,
-          ...stepsType(s).slice(0, 2),
-          `Le sujet est **${TYPE_LABEL[type]}**.`,
-        ],
-      };
-    }
+    case 3:
+      return trousTypes(rng, false);
+    case 4:
+      // Seule nouveauté du niveau : le groupe qui dit quand. Les phrases à piège arrivent au niveau 5.
+      return trousTypes(rng, true);
     default: {
-      const k = rng.int(1, 2);
+      const k = rng.int(1, 3);
       const piege = rng.pick(SUJETS_PIEGES);
+      const piegeEt = rng.pick(SUJETS_ET_APRES_VERBE);
       const rest = pickN(
         rng,
-        SUJETS.filter((s) => s.type !== 'noms'),
+        SUJETS.filter((s) => s.type !== 'noms' && s.s !== piegeEt.s),
         3 - k,
       );
-      const lines = rng.shuffle<Sujet>([...pickN(rng, byType('noms'), k), piege, ...rest]);
+      const noms = pickN(rng, byType('noms'), k);
+      const lines = rng.shuffle<Sujet>([...noms, piege, piegeEt, ...rest]);
       const p = lines.filter((s) => s.type === 'pronom').length;
       const g = lines.filter((s) => s.type === 'gn').length;
+      const comptes = lines.filter((s) => s.type === 'noms').map((s) => `« ${s.s} »`);
       return {
         prompt: 'Lis ce texte. Dans combien de phrases le sujet est-il formé de plusieurs noms ?',
         figure: document(
@@ -577,20 +611,21 @@ function typesSujetsDraft(rng: Rng, level: Level): QuestionDraft {
         ),
         answer: num(k),
         traps: numTraps(r(k), [
-          [g, 'Tu as compté les groupes nominaux : ils n’ont qu’un seul nom noyau.'],
-          ...(p > 0
-            ? [[p, 'Tu as compté les pronoms : un pronom remplace un nom, ce n’est pas « plusieurs noms ».'] as const]
-            : []),
+          // En premier (un de trop, un oublié) : à valeur égale, seule la première explication est gardée.
           [
             k + 1,
-            `Tu en as compté un de trop. Dans « ${piege.s} », ${piege.piege ?? ''} C’est un seul groupe nominal.`,
+            `Tu en as compté un de trop. Dans « ${piege.s} », ${piege.piege ?? ''} Dans « ${piegeEt.s} ${piegeEt.reste} », « et » n’est pas dans le sujet.`,
           ],
+          [k - 1, `Tu en as oublié un. Relis chaque sujet, comme « ${at(noms, 0).s} » : il a plusieurs noms.`],
+          [g, 'Tu as compté les groupes nominaux : ils n’ont qu’un seul nom noyau.'],
+          ...(p > 0 ? [[p, 'Tu as compté les pronoms : un pronom est un seul petit mot, sans nom.'] as const] : []),
         ]),
-        hint: 'Cherche les sujets où des noms sont reliés par « et » ou par une virgule.',
+        hint: 'Trouve d’abord chaque sujet. Compte les noms du sujet seulement.',
         steps: [
-          'Pour chaque ligne, je trouve le sujet avec « Qui est-ce qui… ? ».',
-          'Je garde ceux où plusieurs noms sont reliés par « et » ou par une virgule.',
-          `Je compte : **${k}**.`,
+          'Trouve le sujet de chaque ligne avec « Qui est-ce qui ».',
+          'Écarte les « et » placés après le verbe.',
+          `Garde les sujets à plusieurs noms : ${comptes.join(' ; ')}.`,
+          `Compte les sujets gardés : **${k}**.`,
         ],
       };
     }
@@ -605,6 +640,29 @@ const nPl = (e: NomVerbe) => `des ${e.mot}s`;
 const vSg = (e: NomVerbe) => `${e.sujet} ${e.mot}`;
 const vPl = (e: NomVerbe) => `${e.sujet}s ${e.mot}nt`;
 
+const NATURES = ['un nom', 'un verbe', 'un adjectif'] as const;
+
+/** Le mot placé juste avant le mot étudié : un déterminant (nom) ou un pronom (verbe). */
+const motAvant = (e: NomVerbe, text: string) => {
+  const ws = words(text);
+  return at(ws, ws.findIndex((w) => same(w, e.mot)) - 1);
+};
+
+/** Les bulles pour trouver le verbe d'une phrase où le mot étudié est un nom ou un verbe. */
+const stepsTrouver = (e: NomVerbe, isVerb: boolean, action: 'Choisis' | 'Écris') => {
+  const text = isVerb ? e.verbe : e.nom;
+  const verb = isVerb ? e.mot : e.verbeDuNom;
+  const regarde = `Regarde le mot avant « ${e.mot} » : « ${motAvant(e, text)} ».`;
+  return isVerb
+    ? [regarde, `Mets le sujet au pluriel : « ${vPl(e)} ». Le mot change.`, `${action} le verbe : **${verb}**.`]
+    : [
+        regarde,
+        `Écarte « ${e.mot} » : ici, c’est un nom.`,
+        'Ajoute « hier » devant la phrase. Repère le mot qui change.',
+        `${action} le verbe : **${verb}**.`,
+      ];
+};
+
 function nomVerbeDraft(rng: Rng, level: Level): QuestionDraft {
   const e = rng.pick(NOMS_VERBES);
   const isVerb = rng.int(0, 1) === 1;
@@ -612,40 +670,26 @@ function nomVerbeDraft(rng: Rng, level: Level): QuestionDraft {
   switch (level) {
     case 1: {
       const correct = isVerb ? 'un verbe' : 'un nom';
-      const { answer, traps } = choice(
-        rng,
-        correct,
-        [
-          {
-            label: 'un nom',
-            why: `Ici, « ${e.mot} » dit ce que fait quelqu’un et change avec le sujet (${vSg(e)}, ${vPl(e)}) : c’est un verbe.`,
-          },
-          {
-            label: 'un verbe',
-            why: `Ici, on peut dire « ${nSg(e)} » et « ${nPl(e)} » : c’est un nom. Il ne change pas avec un sujet.`,
-          },
-          {
-            label: 'un adjectif',
-            why: `Un adjectif décrit un nom (un chat noir). Ici, « ${e.mot} » ne décrit aucun nom.`,
-          },
-        ].filter((o) => o.label !== correct),
-        true,
-      );
+      const why: Record<(typeof NATURES)[number], string> = {
+        'un nom': `Ici, « ${e.mot} » dit ce que fait quelqu’un et change avec le sujet (${vSg(e)}, ${vPl(e)}) : c’est un verbe.`,
+        'un verbe': `Ici, on peut dire « ${nSg(e)} » et « ${nPl(e)} » : c’est un nom. Il ne change pas avec un sujet.`,
+        'un adjectif': `Un adjectif décrit un nom (un chat noir). Ici, « ${e.mot} » ne décrit aucun nom.`,
+      };
       return {
-        prompt: `Dans « ${text} », quelle est la nature du mot « ${e.mot} » ?`,
-        answer,
-        traps,
-        hint: 'Essaie de mettre « un » ou « une » devant le mot, ou de changer le sujet de la phrase.',
+        prompt: `Choisis la nature du mot « ${e.mot} » dans « ${text} »`,
+        answer: { kind: 'choice', options: NATURES, correct: NATURES.indexOf(correct) },
+        traps: NATURES.flatMap((n, option) => (n === correct ? [] : [{ option, why: why[n] }])),
+        hint: 'Regarde le mot juste avant. Que t’apprend-il ?',
         steps: isVerb
           ? [
-              `Je change le sujet : « ${vSg(e)} » devient « ${vPl(e)} ». Le mot change.`,
-              'Un mot qui change avec le sujet est un verbe.',
-              `Ici, « ${e.mot} » est **un verbe**.`,
+              `Regarde le mot avant « ${e.mot} » : « ${motAvant(e, text)} ».`,
+              `Mets le sujet au pluriel : « ${vPl(e)} ». Le mot change.`,
+              `Choisis la réponse : « ${e.mot} » est **un verbe**.`,
             ]
           : [
-              `Je mets le mot au pluriel : « ${nSg(e)} » devient « ${nPl(e)} ».`,
-              'Un mot qui prend un déterminant et un -s au pluriel est un nom.',
-              `Ici, « ${e.mot} » est **un nom**.`,
+              `Regarde le mot avant « ${e.mot} » : « ${motAvant(e, text)} ».`,
+              `Mets au pluriel : « ${nPl(e)} ». C’est le pluriel d’un nom.`,
+              `Choisis la réponse : « ${e.mot} » est **un nom**.`,
             ],
       };
     }
@@ -660,22 +704,16 @@ function nomVerbeDraft(rng: Rng, level: Level): QuestionDraft {
         wrong.map((w) => ({
           label: w,
           why: same(w, e.mot)
-            ? `Ici, « ${e.mot} » est un nom : on peut dire « ${nSg(e)} », « ${nPl(e)} ». Le verbe est « ${verb} ».`
-            : `« ${w} » ne dit pas ce que fait ou ce qu’est le sujet : ce n’est pas le verbe.`,
+            ? `Ici, « ${e.mot} » est un nom : on peut dire « ${nSg(e)} », « ${nPl(e)} ». Le verbe est un autre mot.`
+            : `« ${w} » ne change pas si tu ajoutes « hier » : ce n’est pas le verbe.`,
         })),
       );
       return {
-        prompt: `Dans cette phrase, quel mot est le verbe ? « ${text} »`,
+        prompt: `Choisis le verbe de cette phrase : « ${text} »`,
         answer,
         traps,
-        hint: 'Attention : un mot de la phrase peut ressembler à un verbe alors que c’est un nom. Change le sujet pour voir quel mot bouge.',
-        steps: [
-          'Un verbe change quand on change le sujet ; un nom, lui, prend un déterminant.',
-          isVerb
-            ? `« ${vSg(e)} » devient « ${vPl(e)} » : le mot bouge, c’est le verbe.`
-            : `« ${e.mot} » est un nom (${nSg(e)}, ${nPl(e)}). Le vrai verbe est « ${verb} ».`,
-          `Le verbe est **${verb}**.`,
-        ],
+        hint: 'Attention : un nom peut ressembler à un verbe.',
+        steps: stepsTrouver(e, isVerb, 'Choisis'),
       };
     }
     case 3: {
@@ -683,7 +721,7 @@ function nomVerbeDraft(rng: Rng, level: Level): QuestionDraft {
       const pl = isVerb ? vPl(e) : nPl(e);
       return {
         prompt: `Mets au pluriel : « ${sg} ».`,
-        answer: { kind: 'text', accepted: [pl] },
+        answer: { kind: 'text', accepted: ecritures(pl) },
         traps: isVerb
           ? [
               textTrap(
@@ -699,19 +737,17 @@ function nomVerbeDraft(rng: Rng, level: Level): QuestionDraft {
               textTrap(`des ${e.mot}`, 'Un nom prend un -s au pluriel : des ' + e.mot + 's.'),
               textTrap(`des ${e.mot}nt`, 'La terminaison -nt est celle des verbes. Un nom prend un -s au pluriel.'),
             ],
-        hint: isVerb
-          ? 'Pour un verbe, c’est le sujet qui change. Ajoute la terminaison qui va avec « ils » ou « elles ».'
-          : 'Pour un nom, on change le déterminant et on ajoute la marque du pluriel.',
+        hint: 'Regarde le premier mot : annonce-t-il un nom ou un verbe ?',
         steps: isVerb
           ? [
-              `« ${e.mot} » est ici un verbe : il s’accorde avec son sujet.`,
-              `Avec « ${e.sujet}s », le verbe prend -nt.`,
-              `Au pluriel : **${pl}**.`,
+              `Repère « ${e.sujet} » : ici, « ${e.mot} » est un verbe.`,
+              `Remplace « ${e.sujet} » par « ${e.sujet}s ». Ajoute -nt au verbe.`,
+              `Écris au pluriel : **${pl}**.`,
             ]
           : [
-              `« ${e.mot} » est ici un nom : il prend un déterminant.`,
-              'Au pluriel, le déterminant devient « des » et le nom prend un -s.',
-              `Au pluriel : **${pl}**.`,
+              `Repère « ${e.det} » : ici, « ${e.mot} » est un nom.`,
+              `Remplace « ${e.det} » par « des ». Ajoute -s au nom.`,
+              `Écris au pluriel : **${pl}**.`,
             ],
       };
     }
@@ -721,53 +757,51 @@ function nomVerbeDraft(rng: Rng, level: Level): QuestionDraft {
       const sujet = at(ws, 0);
       const autres = ws.filter((w) => !same(w, verb) && !same(w, e.mot));
       const last = at(autres, autres.length - 1);
+      // Vrai pour tout mot qui n'est pas le verbe, y compris un adjectif (il s'accorde, lui, avec le sujet).
+      const whyLast = `« ${last} » ne change pas si tu ajoutes « hier » : ce n’est pas le verbe.`;
       return {
         prompt: `Écris le verbe conjugué de cette phrase : « ${text} »`,
-        answer: { kind: 'text', accepted: [verb] },
+        answer: { kind: 'text', accepted: ecritures(verb) },
         traps: isVerb
           ? [
               textTrap(
                 sujet,
                 `« ${sujet} » est le pronom sujet : il dit qui fait l’action, mais ce n’est pas le verbe.`,
               ),
-              textTrap(last, `« ${last} » est un autre mot de la phrase : ce n’est pas lui qui change avec le sujet.`),
+              textTrap(last, whyLast),
             ]
           : [
               textTrap(
                 e.mot,
                 `Ici, « ${e.mot} » est un nom : on peut dire « ${nSg(e)} », « ${nPl(e)} ». Ce n’est pas le verbe.`,
               ),
-              textTrap(last, `« ${last} » est un autre mot de la phrase : ce n’est pas lui qui change avec le sujet.`),
+              textTrap(last, whyLast),
             ],
-        hint: 'Change le sujet (ou mets la phrase au passé avec « hier ») : le mot qui change est le verbe.',
-        steps: [
-          'Un verbe change avec le sujet et le temps. Un nom ne dit pas ce que fait le sujet.',
-          isVerb
-            ? `« ${e.mot} » change : « ${vSg(e)} », « ${vPl(e)} ». C’est le verbe.`
-            : `« ${e.mot} » est ici un nom (${nSg(e)}, ${nPl(e)}). Le verbe est un autre mot.`,
-          `Le verbe conjugué est **${verb}**.`,
-        ],
+        hint: 'Ajoute « hier » devant : un seul mot change.',
+        steps: stepsTrouver(e, isVerb, 'Écris'),
       };
     }
     default: {
       const k = rng.int(1, 3);
       const entries = pickN(rng, NOMS_VERBES, 4);
       const flags = rng.shuffle([0, 1, 2, 3].map((i) => i < k));
-      const lines = entries.map((x, i) => `${flags[i] ? x.verbe : x.nom} (mot à étudier : ${x.mot})`);
+      const lines = entries.map((x, i) => `${flags[i] ? x.texte.verbe : x.texte.nom} (mot à étudier : ${x.mot})`);
+      const verbes = entries.filter((_, i) => flags[i]).map((x) => `« ${x.texte.hier} »`);
       return {
         prompt: 'Lis ce texte. Dans combien de phrases le mot à étudier est-il un verbe ?',
-        figure: document('Quelques phrases', lines),
+        figure: document('Au village', lines),
         answer: num(k),
         traps: numTraps(r(k), [
           [4 - k, 'Tu as compté les noms au lieu des verbes.'],
-          [k + 1, 'Tu en as compté un de trop : pour chaque mot, essaie « un / une » devant, puis change le sujet.'],
-          [k - 1, 'Il t’en manque un : un mot qui change avec le sujet est un verbe, même s’il ressemble à un nom.'],
+          [k + 1, 'Tu en as compté un de trop. Ajoute « hier » : un nom ne change pas.'],
+          [k - 1, 'Il t’en manque un. Cherche qui fait l’action, puis ajoute « hier ».'],
         ]),
-        hint: 'Pour chaque ligne, essaie de mettre « un » ou « une » devant le mot : si c’est possible, c’est un nom.',
+        hint: 'Ajoute « hier » devant chaque phrase. Le mot à étudier change-t-il ?',
         steps: [
-          'Pour chaque ligne, je regarde le mot à étudier.',
-          'Si je peux dire « un / une » devant, c’est un nom. S’il change avec le sujet, c’est un verbe.',
-          `Je compte les verbes : **${k}**.`,
+          'Ajoute « hier » devant chaque phrase.',
+          'Regarde si le mot à étudier change : si oui, c’est un verbe.',
+          `Relis chaque verbe avec son sujet : ${verbes.join(' ; ')}.`,
+          `Compte ces verbes : **${k}**.`,
         ],
       };
     }
@@ -781,6 +815,7 @@ interface Notion {
   readonly title: string;
   readonly memo: readonly string[];
   readonly factId: string;
+  readonly sens: Sens;
   readonly generate: Skill['generate'];
 }
 
@@ -788,7 +823,8 @@ const skill = (n: Notion): Skill => ({
   id: n.id,
   title: n.title,
   levels: 5,
-  version: 1,
+  version: 2,
+  sens: [n.sens],
   lesson: { memo: n.memo, source: programme(n.factId), sources: [PROGRAMME] },
   generate: n.generate,
 });
@@ -798,54 +834,59 @@ export const FCM1_VERBE_SUJET: readonly Skill[] = [
     id: 'fcm1-verbe-conjugue',
     title: 'Trouver le verbe conjugué',
     memo: [
-      'Le **verbe conjugué** dit ce que fait quelqu’un. Il change avec le sujet et le temps : « Je mange », « Hier, je mangeais ».',
-      'Astuce : commence la phrase par « hier ». Le mot qui change, c’est le verbe conjugué.',
-      'Un verbe à l’**infinitif** ne change pas : dans « Je veux manger », le verbe conjugué est « veux ».',
+      'Le **verbe conjugué** change avec le sujet et le temps.',
+      'Ajoute « hier » : « je chante » devient « hier, je chantais ».',
+      'Un verbe à l’**infinitif**, comme « chanter », ne change pas.',
     ],
     factId: 'verbe-conjugue',
+    sens: SENS_VS.verbe,
     generate: verbeDraft,
   }),
   skill({
     id: 'fcm1-infinitif',
     title: 'Trouver l’infinitif',
     memo: [
-      'L’**infinitif** est le nom du verbe, celui du dictionnaire : chanter, finir, prendre.',
-      'Pour le retrouver, dis « il faut… » devant. « Nous chantons » : il faut chanter.',
-      'Attention : le verbe conjugué (« chantons ») n’est pas l’infinitif.',
+      'L’**infinitif** est la forme du verbe qui ne change pas avec le sujet.',
+      'Pose « il faut » devant : « nous chantons » donne « il faut chanter ».',
     ],
     factId: 'infinitif',
+    sens: SENS_VS.infinitif,
     generate: infinitifDraft,
   }),
   skill({
     id: 'fcm1-groupe-sujet',
     title: 'Trouver le groupe sujet',
     memo: [
-      'Le **groupe sujet** dit qui fait l’action. Pose la question « Qui est-ce qui… ? » devant le verbe.',
-      'Tu peux aussi l’encadrer : « C’est le petit chat qui dort. »',
-      'Le groupe sujet contient tous les mots autour du **nom noyau**. Ici, le nom noyau est « chat ».',
+      'Le **groupe sujet** dit qui fait l’action.',
+      'Pose « Qui est-ce qui » devant le verbe.',
+      'Garde tous les mots : « le petit chat », pas seulement le **nom noyau** « chat ».',
     ],
     factId: 'groupe-sujet',
+    sens: SENS_VS.groupeSujet,
     generate: sujetDraft,
   }),
   skill({
     id: 'fcm1-types-sujets',
     title: 'Sujet pronom, groupe nominal ou plusieurs noms',
     memo: [
-      'Le sujet peut être un **pronom personnel** : « Elle chante. » Il remplace un nom.',
-      'Il peut être un **groupe nominal** : « Le petit chat dort. » Un seul nom, avec son déterminant.',
-      'Il peut être formé de plusieurs noms : « Mon père et ma mère cuisinent. »',
+      'Un **pronom personnel sujet** est un petit mot sujet : « elle chante ».',
+      'Un **groupe nominal** a un nom noyau : « le petit chat dort ».',
+      'Le sujet peut réunir plusieurs noms : « mon père et ma mère cuisinent ».',
     ],
     factId: 'types-sujets',
+    sens: SENS_VS.typesSujets,
     generate: typesSujetsDraft,
   }),
   skill({
     id: 'fcm1-nom-ou-verbe',
     title: 'Nom ou verbe : une élève, il élève',
     memo: [
-      'Certains mots s’écrivent pareil, mais n’ont pas la même nature. « Une élève » : c’est un **nom**. « Il élève des lapins » : c’est un verbe.',
-      'Un nom prend un déterminant et un -s au pluriel : des élèves. Un verbe change avec le sujet : il élève, ils élèvent.',
+      'Dans « une élève », le mot « élève » est un **nom**.',
+      'Dans « il élève des lapins », c’est un **verbe**.',
+      'Au pluriel, compare : « des élèves », mais « ils élèvent ».',
     ],
     factId: 'variations',
+    sens: SENS_VS.nomVerbe,
     generate: nomVerbeDraft,
   }),
 ];
