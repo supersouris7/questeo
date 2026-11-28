@@ -4,6 +4,7 @@ import { route } from '../../core/http/route.ts';
 import { readCookie, serializeCookie, SESSION_COOKIE } from '../../core/auth/cookies.ts';
 import type { Google } from '../../core/auth/google.ts';
 import { googleRoutes } from './google.routes.ts';
+import { portalRoutes } from './portal.routes.ts';
 import type { AccountsService, OpenedSession } from './accounts.service.ts';
 
 /**
@@ -14,10 +15,13 @@ export function accountsRoutes(
   service: AccountsService,
   cookie: { secure: boolean; maxAgeDays: number; rateLimitMax: number },
   google: Google | null = null,
-  options: { recette: boolean; passwordMinLength: number; portalLogoutUrl?: string | null } = {
-    recette: false,
-    passwordMinLength: 12,
-  },
+  options: {
+    recette: boolean;
+    passwordMinLength: number;
+    portalLogoutUrl?: string | null;
+    /** Secret du proxy du portail : présent, la connexion par le portail est active. */
+    portalSecret?: string | null;
+  } = { recette: false, passwordMinLength: 12 },
 ) {
   const STRICT = { rateLimit: { max: cookie.rateLimitMax, timeWindow: '1 minute' } };
   const setSession = (reply: FastifyReply, opened: OpenedSession) => {
@@ -51,7 +55,11 @@ export function accountsRoutes(
       passwordMinLength: options.passwordMinLength,
       recette: options.recette,
       ...(options.portalLogoutUrl ? { portalLogoutUrl: options.portalLogoutUrl } : {}),
+      ...(options.portalSecret ? { portalLogin: true } : {}),
     }));
+    // Désactivé : la route n'existe pas (404).
+    const secret = options.portalSecret;
+    if (secret) portalRoutes(app, { service, secret, strict: STRICT, setSession });
     if (google) googleRoutes(app, { service, google, secure: cookie.secure, strict: STRICT, setSession });
     route(
       app,

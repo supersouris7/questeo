@@ -10,6 +10,7 @@ import {
   HiddenInRecette,
   LoginScreen,
   ParentGateProvider,
+  PortalSignIn,
   RequireAccount,
   ResetPasswordScreen,
   SignupScreen,
@@ -171,7 +172,14 @@ export function GameApp() {
               </HiddenInRecette>
             }
           />
-          <Route path="/connexion" element={<LoginScreen />} />
+          <Route
+            path="/connexion"
+            element={
+              <PortalSignIn>
+                <LoginScreen />
+              </PortalSignIn>
+            }
+          />
           <Route path="/inscription" element={<SignupScreen />} />
           <Route path="/email/verification" element={<VerifyEmailScreen />} />
           <Route path="/mot-de-passe-oublie" element={<ForgotPasswordScreen />} />

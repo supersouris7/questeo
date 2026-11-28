@@ -6,6 +6,7 @@ import { GameButton } from '../../shared/ui/game/GameButton.tsx';
 import { useToast } from '../../shared/ui/Toast.tsx';
 import { authOptions, lockParent, logout, useSetMe } from './api.ts';
 import { useParentGate } from './parentGate.ts';
+import { holdPortalLogin } from './portalLogin.ts';
 
 /**
  * Le code est redemandé à chaque fois : l'Espace parent est d'abord reverrouillé, puis le serveur
@@ -21,6 +22,7 @@ export function SignOutButton() {
   const [busy, setBusy] = useState(false);
 
   const leave = async () => {
+    holdPortalLogin();
     await logout();
     const portal = (await authOptions().catch(() => null))?.portalLogoutUrl;
     selectProfile(null);

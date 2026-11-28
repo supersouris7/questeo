@@ -18,6 +18,7 @@ import {
   useSetMe,
   verifyEmail,
 } from './api.ts';
+import { ChooseParentPin } from './ChooseParentPin.tsx';
 
 /**
  * Écrans du compte familial (connexion, inscription, mot de passe oublié) et garde des pages
@@ -46,6 +47,8 @@ export function RequireAccount({ children }: { readonly children?: ReactNode }) 
       </div>
     );
   }
+  // Compte du portail : le code parent se choisit avant tout autre écran.
+  if (data.needsPin) return <ChooseParentPin unlocked={data.parent} />;
   // Famille changée (autre onglet) : les écrans repartent de zéro, sans rien garder à l'affichage.
   return (
     <Fragment key={data.family.id}>
@@ -221,17 +224,21 @@ function AuthForm(props: {
   );
 }
 
+/** Refus d'une connexion externe, annoncé par le serveur dans l'adresse (`?erreur=…`). */
+const LOGIN_ERRORS: Readonly<Record<string, string>> = {
+  google: 'Connexion avec Google impossible : réessaie, ou utilise ton e-mail.',
+  portail: 'Connexion par le portail impossible : réessaie, ou utilise ton e-mail.',
+  'portail-compte': 'Un compte existe déjà avec cette adresse : connecte-toi avec ton mot de passe.',
+};
+
 export function LoginScreen() {
   const navigate = useNavigate();
   const location = useLocation();
   const setMe = useSetMe();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(
-    useSearchParams()[0].get('erreur') === 'google'
-      ? 'Connexion avec Google impossible : réessaie, ou utilise ton e-mail.'
-      : null,
-  );
+  const refusal = useSearchParams()[0].get('erreur') ?? '';
+  const [error, setError] = useState<string | null>(LOGIN_ERRORS[refusal] ?? null);
   const [unverified, setUnverified] = useState(false);
   const recette = useAuthOptions().data?.recette ?? false;
   const from = (location.state as { from?: string } | null)?.from ?? '/';

@@ -210,6 +210,30 @@ describe('migrations', () => {
     }
   });
 
+  it('connexion par le portail : depuis une base en 0029, comptes intacts ; retour arrière', async () => {
+    const dir = migrationsUpTo(30); // jusqu'à 0029
+    try {
+      database = await openDatabase('pglite://memory');
+      await runMigrations(database, dir);
+      const { db } = database;
+      await db.execute(sql`insert into families (id) values ('bbbbbbbb-1111-4111-8111-bbbbbbbbbbbb')`);
+      await db.execute(sql`insert into accounts (family_id, email)
+        values ('bbbbbbbb-1111-4111-8111-bbbbbbbbbbbb', 'parent@famille.test')`);
+      await runMigrations(database, MIGRATIONS_DIR);
+      const linked = sql`select email, portal_linked_at from accounts`;
+      expect(rows(await db.execute(linked))).toEqual([{ email: 'parent@famille.test', portal_linked_at: null }]);
+      const rollback = readFileSync(path.join(MIGRATIONS_DIR, '0030_connexion_portail.sql'), 'utf8')
+        .split('\n')
+        .filter((l) => l.startsWith('--   '))
+        .map((l) => l.slice(5));
+      for (const statement of rollback) await db.execute(sql.raw(statement));
+      await expect(db.execute(linked)).rejects.toThrow();
+      expect(rows(await db.execute(sql`select email from accounts`))).toEqual([{ email: 'parent@famille.test' }]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('épreuve du chapitre : depuis une base en 0019, parties intactes ; une seule récompense ; retour arrière', async () => {
     const dir = migrationsUpTo(20); // jusqu'à 0019
     try {

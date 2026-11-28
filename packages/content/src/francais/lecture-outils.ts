@@ -118,13 +118,18 @@ export const avecSansArticle = (pieges: Saisie['pieges']): Saisie['pieges'] =>
 
 const sansAccent = (c: string) => c.normalize('NFD').replace(/\p{M}/gu, '');
 /** Une écriture et toutes celles où des accents manquent (un, plusieurs ou tous). */
-const ecritures = (texte: string): string[] =>
+const ecritures = (texte: string, exiges: string): string[] =>
   Array.from(texte).reduce<string[]>(
-    (debuts, c) => debuts.flatMap((d) => [...new Set([c, sansAccent(c)])].map((x) => d + x)),
+    (debuts, c) => debuts.flatMap((d) => [...new Set([c, exiges.includes(c) ? c : sansAccent(c)])].map((x) => d + x)),
     [''],
   );
-/** Le chapitre ne porte pas sur les accents : ils sont facultatifs dans toutes les saisies. */
-export const tolerer = (accepted: readonly string[]): string[] => [...new Set(accepted.flatMap(ecritures))];
+/**
+ * Les accents sont facultatifs dans les saisies, sauf sur les lettres `exiges` : sans accent, elles formeraient un
+ * autre mot (« a », verbe avoir, pour « à »).
+ */
+export const tolerer = (accepted: readonly string[], exiges = ''): string[] => [
+  ...new Set(accepted.flatMap((t) => ecritures(t, exiges))),
+];
 
 export function saisir(s: Saisie, consigne: string, etapes: readonly Rich[], hint: string): QuestionDraft {
   return ecrire(tolerer(s.accepted), avecSansArticle(s.pieges), {

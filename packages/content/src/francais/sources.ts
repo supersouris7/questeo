@@ -498,6 +498,15 @@ export const SOURCES: readonly Source[] = [
     textDate: '2026',
     consultedOn: CONSULTED,
   },
+  // Repasse rp-fr-cm1-03 (les compléments)
+  {
+    id: 'cnrtl-circonstance',
+    title: 'Trésor de la langue française informatisé, article « circonstance »',
+    publisher: 'CNRTL (CNRS, ATILF)',
+    url: 'https://www.cnrtl.fr/definition/circonstance',
+    textDate: '2026',
+    consultedOn: '2026-11-27',
+  },
   // Lot fr-cm1-11 (lecture)
   academie('ou', 'où'),
   academie('quand', 'quand'),

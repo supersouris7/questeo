@@ -158,6 +158,20 @@ export const GLOSSAIRE: readonly SubjectTerm[] = [
     example: 'She has got a bike.',
   },
   {
+    id: 'proprietaire',
+    word: 'propriétaire',
+    forms: ['propriétaire', 'propriétaires'],
+    definition: 'La personne (ou l’animal) à qui est une chose.',
+    example: 'Dans Tom’s dog, le propriétaire est Tom.',
+  },
+  {
+    id: 'forme-courte',
+    word: 'forme courte',
+    forms: ['forme courte'],
+    definition: 'Des mots raccourcis et collés, avec une apostrophe.',
+    example: 'I have got devient I’ve got.',
+  },
+  {
     id: 'genitif',
     word: 'génitif',
     forms: ['génitif'],
@@ -1116,5 +1130,12 @@ export const GLOSSAIRE: readonly SubjectTerm[] = [
     forms: ['In my opinion'],
     definition: '« À mon avis » : annonce un avis.',
     example: 'In my opinion, it’s great.',
+  },
+  {
+    id: 'portrait',
+    word: 'portrait',
+    forms: ['portrait', 'portraits'],
+    definition: 'Une description d’une personne, en mots ou en image.',
+    example: '« He was born in Kentucky » fait partie d’un portrait.',
   },
 ];

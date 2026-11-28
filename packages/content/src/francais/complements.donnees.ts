@@ -2,6 +2,8 @@
  * Données du chapitre « Les compléments » (CM1) : faits cités et banque de phrases écrites pour l'exercice.
  * Chaque fait porte l'identifiant de sa source (registre `sources.ts`) et sa citation exacte.
  */
+import type { Sens } from '../types.ts';
+import { tolerer } from './lecture-outils.ts';
 import type { Fait } from './phrases.donnees.ts';
 import { lowerFirst } from './outils.ts';
 
@@ -44,6 +46,36 @@ export const faitCompl = (id: string): Fait => {
   if (!f) throw new Error(`fait inconnu : ${id}`);
   return f;
 };
+
+/** « Pourquoi apprendre ça ? » (README §9) : une phrase par notion, citation exacte. */
+export const SENS_COMPL = {
+  objetCirc: {
+    type: 'usage',
+    text: 'Étudier la langue t’aide aussi à mieux comprendre les textes que tu lis.',
+    source: PROGRAMME,
+    citation:
+      'Elle est aussi convoquée à l’occasion des lectures, notamment pour favoriser la compréhension des textes.',
+  },
+  codCoi: {
+    type: 'usage',
+    text: 'Plus tard, le COD t’aidera à accorder le participe passé avec « avoir ».',
+    source: PROGRAMME,
+    citation: 'Accorder le participe passé avec le COD pour les verbes étudiés et conjugués avec l’auxiliaire avoir',
+  },
+  circonstanciels: {
+    type: 'savais-tu',
+    text: '« Circonstance » vient d’un mot latin qui veut dire « action d’entourer, d’être autour ».',
+    source: 'cnrtl-circonstance',
+    citation: "Empr. au lat. class. circumstantia « action d'entourer, d'être autour; situation, circonstances »",
+  },
+  manipulations: {
+    type: 'usage',
+    text: 'Déplacer, ajouter ou remplacer des mots t’aide quand tu écris tes textes.',
+    source: PROGRAMME,
+    citation:
+      'des habiletés au service des activités langagières et plus particulièrement pour la production d’écrits et l’étude de la langue',
+  },
+} as const satisfies Record<string, Sens>;
 
 // ───────────────────────── Phrases ─────────────────────────
 
@@ -324,9 +356,15 @@ export const MANIPS: readonly Manip[] = ['deplacer', 'supprimer', 'remplacer', '
 /** « souvent » ne s'ajoute qu'aux phrases sans repère de fréquence ou de moment. */
 export const manipsDe = (e: Entree): readonly Manip[] => MANIPS.filter((m) => m !== 'ajouter' || e.avant !== undefined);
 
-/** Écritures acceptées d'une phrase : avec ou sans point ; la virgule après un groupe placé en tête est facultative. */
+/** Écritures d’une phrase : avec ou sans point ; la virgule après un groupe placé en tête est facultative. */
 export const ecritures = (phrase: string): string[] =>
   [...new Set([phrase, phrase.replace(',', '')])].flatMap((s) => [s, s.replace(/\.$/, '')]);
+/** Les accents sont facultatifs, sauf celui de « à » : « a » est le verbe avoir, et non la préposition évaluée. */
+const toleres = (accepted: readonly string[]): string[] => tolerer(accepted, 'àÀ');
+/** Réponses acceptées pour une phrase. */
+export const phraseAcceptee = (phrase: string): string[] => toleres(ecritures(phrase));
+/** Réponses acceptées pour un groupe recopié : point ou virgule recopiés tolérés. */
+export const groupeAccepte = (groupe: string): string[] => toleres([groupe, `${groupe}.`, `${groupe},`]);
 
 /** Résultat d'une manipulation sur la phrase de base. */
 export function resultat(e: Entree, m: Manip): string {
@@ -356,7 +394,7 @@ export function consigne(e: Entree, m: Manip): string {
     case 'ajouter':
       return 'ajoute « souvent » juste après le verbe';
     case 'encadrer':
-      return `encadre « ${e.circ} » avec « C’est… que »`;
+      return `encadre « ${e.circ} » avec « C’est » et « que »`;
   }
 }
 
@@ -374,7 +412,7 @@ export const EN_FAISANT: Record<Manip, string> = {
   supprimer: 'en supprimant le groupe circonstanciel',
   remplacer: 'en remplaçant le groupe circonstanciel',
   ajouter: 'en ajoutant « souvent »',
-  encadrer: 'en encadrant le groupe circonstanciel avec « C’est… que »',
+  encadrer: 'en encadrant le groupe circonstanciel avec « C’est » et « que »',
 };
 
 /** Ce qu'est la manipulation (pour expliquer pourquoi ce n'est pas elle). */
@@ -383,7 +421,7 @@ export const DEFINITION: Record<Manip, string> = {
   supprimer: 'Supprimer, c’est enlever un groupe.',
   remplacer: 'Remplacer, c’est mettre un autre groupe à la place d’un groupe.',
   ajouter: 'Ajouter, c’est mettre un mot ou un groupe en plus.',
-  encadrer: 'Encadrer, c’est entourer un groupe avec « C’est… que » ou « C’est… qui ».',
+  encadrer: 'Encadrer, c’est entourer un groupe avec « C’est » et « que ».',
 };
 
 /** Ce qu'on a fait, vu dans la phrase obtenue. */
@@ -392,5 +430,5 @@ export const CONSTAT: Record<Manip, string> = {
   supprimer: 'un groupe a disparu',
   remplacer: 'un groupe a été changé contre un autre',
   ajouter: 'un mot a été mis en plus',
-  encadrer: 'un groupe est entouré par « C’est… que »',
+  encadrer: 'un groupe est entouré par « C’est » et « que »',
 };
